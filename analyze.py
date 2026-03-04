@@ -192,13 +192,18 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
 def run(
     profile_performance=False,
     output_csv_path=None,
+    search_sellers: list[str] | None = None,
     search_models: list[Model] | None = None,
     search_storages: list[Storage] | None = None,
 ):
     with deps.timing.time_stage("program"):
+        active_sellers = [
+            seller for seller in SELLERS
+            if search_sellers is None or seller.key in search_sellers
+        ]
         results = []
         known_price_xref_count = 0
-        known_price_xref_by_seller = {seller.key: 0 for seller in SELLERS}
+        known_price_xref_by_seller = {seller.key: 0 for seller in active_sellers}
         today = datetime.now()
         base_info = MODEL_INFO[normalize_model_name("Pixel 6a")]
         base_area = base_info.width_mm * base_info.height_mm
@@ -222,7 +227,7 @@ def run(
                 search_storages=search_storages,
             ),
             Condition,
-            SELLERS,
+            active_sellers,
         ):
             seller_name = seller.key
             get_price = seller.get_lowest_price

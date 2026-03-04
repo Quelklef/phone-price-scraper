@@ -3,6 +3,8 @@ import argparse
 import deps
 from core import Model, Storage, normalize_model_name
 
+SUPPORTED_SELLER_KEYS = ("swappa", "ebay", "amazon", "backmarket")
+
 ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
 
@@ -71,6 +73,24 @@ def _parse_storages_csv(raw_value):
     return selected
 
 
+def _parse_sellers_csv(raw_value):
+    selected = []
+    invalid = []
+    for item in _parse_csv(raw_value, "seller"):
+        key = item.strip().lower()
+        if key not in SUPPORTED_SELLER_KEYS:
+            invalid.append(item)
+            continue
+        if key not in selected:
+            selected.append(key)
+    if invalid:
+        valid = ", ".join(SUPPORTED_SELLER_KEYS)
+        raise argparse.ArgumentTypeError(
+            f"Unknown seller values: {', '.join(invalid)}. Valid sellers: {valid}"
+        )
+    return selected
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         description="Check phone listing prices from multiple sellers.",
@@ -120,6 +140,12 @@ def build_parser():
     )
     search_group = parser.add_argument_group("search scope")
     search_group.add_argument(
+        "--search-sellers",
+        default=None,
+        metavar="LIST",
+        help="Comma-separated sellers to search (e.g. \"swappa,ebay\").",
+    )
+    search_group.add_argument(
         "--search-models",
         default=None,
         metavar="LIST",
@@ -152,6 +178,11 @@ def parse_args():
         if args.search_storages is not None
         else None
     )
+    args.search_sellers = (
+        _parse_sellers_csv(args.search_sellers)
+        if args.search_sellers is not None
+        else None
+    )
     return parser, args
 
 
@@ -167,6 +198,7 @@ def main():
     return run(
         profile_performance=args.profile_performance,
         output_csv_path=args.output_csv,
+        search_sellers=args.search_sellers,
         search_models=args.search_models,
         search_storages=args.search_storages,
     )
