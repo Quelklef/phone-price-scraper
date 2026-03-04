@@ -4,6 +4,7 @@ import deps
 from core import Model, Storage, normalize_model_name
 
 SUPPORTED_SELLER_KEYS = ("swappa", "ebay", "amazon", "backmarket")
+DEFAULT_SEARCH_STORAGES: list[Storage] = [128, 256, 512]
 
 ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
@@ -158,7 +159,10 @@ def build_parser():
         "--search-storages",
         default=None,
         metavar="LIST",
-        help="Comma-separated storage list to search (e.g. \"128gb,256gb\").",
+        help=(
+            "Comma-separated storage list to search (e.g. \"128gb,256gb\"). "
+            "Default: 128gb,256gb,512gb."
+        ),
     )
     parser.description = ANALYZE_LONG_HELP
 
@@ -176,7 +180,7 @@ def parse_args():
     args.search_storages = (
         _parse_storages_csv(args.search_storages)
         if args.search_storages is not None
-        else None
+        else list(DEFAULT_SEARCH_STORAGES)
     )
     args.search_sellers = (
         _parse_sellers_csv(args.search_sellers)

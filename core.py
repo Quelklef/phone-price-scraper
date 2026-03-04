@@ -41,7 +41,6 @@ _RAW_KNOWN_MODELS: list[Model] = [
 ]
 
 KNOWN_MODELS: list[Model] = [normalize_model_name(model) for model in _RAW_KNOWN_MODELS]
-KNOWN_STORAGES_GB: list[Storage] = [128, 256, 512]
 
 
 class LogicExtractionError(RuntimeError):
