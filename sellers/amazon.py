@@ -24,7 +24,7 @@ from lxml import html as lxml_html
 import deps
 from core import Condition, Model, Storage
 from core import LogicExtractionError
-from sellers.smoke_match import contains_other_model
+from sellers.smoke_match import contains_multi_storage_listing, contains_other_model
 from sellers.spec import SellerSpec
 
 
@@ -101,6 +101,11 @@ def _card_matches_filters(card, model: Model, storage: Storage):
     """
     title_text = _card_title_text(card)
     if not title_text:
+        return False
+
+    # Reject cards that advertise multiple capacities ("128GB | 256GB ..."):
+    # the shown card price is often a variant floor, not the requested storage.
+    if contains_multi_storage_listing(title_text):
         return False
 
     # Keep the smoke-check scope narrow (title text only) to avoid

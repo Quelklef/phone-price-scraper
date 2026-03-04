@@ -16,13 +16,13 @@ Why the extra strictness:
 from urllib.parse import quote, quote_plus, urlsplit, urlunsplit
 
 from lxml import html as lxml_html
-import re
 
 import deps
 from core import Condition, Model, Storage
 from core import LogicExtractionError
 from sellers.spec import SellerSpec
 from sellers.smoke_match import (
+    contains_multi_storage_listing,
     normalize_text,
     passes_model_smoke_checks,
     storage_terms,
@@ -33,7 +33,6 @@ CONDITION_TERMS = {
     Condition.BEST: "1000|1500|2010",  # 1000=new, 1500=open box, 2010=excellent
     Condition.GOOD: "2020|2030",       # 2020=very good, 2030=good
 }
-
 
 def build_search_url(model: Model, condition: Condition, storage: Storage):
     """Build eBay search URL with encoded facet/query parameters.
@@ -85,6 +84,8 @@ def _card_matches_filters(card, model: Model, condition: Condition, storage: Sto
     haystack_text = " ".join(" ".join(node.itertext()).strip() for node in nodes)
     haystack = normalize_text(haystack_text)
     if "readdescription" in haystack or "seedescription" in haystack:
+        return False
+    if contains_multi_storage_listing(haystack_text):
         return False
     if not passes_model_smoke_checks(haystack, model):
         return False

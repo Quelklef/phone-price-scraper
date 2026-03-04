@@ -32,6 +32,21 @@ _VARIANT_TOKENS = frozenset(
     }
 )
 _SEPARATOR_RE = re.compile(r"(?:-|/|\||,|&|\band\b)", flags=re.IGNORECASE)
+# Detect storage mentions like "128GB", "256 gb", or "64g".
+# We intentionally require at least 2 digits so "5g" network text is not
+# misread as storage. We also avoid `\b...\b` boundaries because some listings
+# use Unicode separators (for example "512GB丨256GB") that can break word-boundary
+# assumptions; numeric lookarounds are more robust here.
+_STORAGE_TOKEN_RE = re.compile(r"(?<!\d)(\d{2,4})\s*g(?:b)?(?=\D|$)", flags=re.IGNORECASE)
+# Match compact multi-capacity forms that share one trailing unit, such as:
+# - "128/256GB"
+# - "128 / 256 / 512 gb"
+# Without this, single-token matching sees only the last value (e.g. 256GB)
+# and can miss that the card advertises multiple storage variants.
+_COMPACT_MULTI_STORAGE_RE = re.compile(
+    r"(?<!\d)(\d{2,4}(?:\s*/\s*\d{2,4})+)\s*g(?:b)?(?=\D|$)",
+    flags=re.IGNORECASE,
+)
 
 # High-level variant filtering model
 # ---------------------------------
@@ -87,7 +102,11 @@ def text_matches(haystack_text, model_terms, condition_terms, storage_term_value
 
 
 def _tokenize_words(text):
-    return re.findall(r"[a-z0-9]+", (text or "").lower())
+    # Keep decimal numbers together (for example "6.7") so screen-size text
+    # does not split into stray integer tokens ("6", "7"). Splitting decimals
+    # can create false same-family hits (e.g. family key "7") and wrongly
+    # reject otherwise valid listings.
+    return re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)*", (text or "").lower())
 
 
 def _split_combined_variant_token(token):
@@ -218,3 +237,32 @@ def contains_multi_variant_model_list(haystack_text, target_model: Model):
     # If any listed variant differs from the target signature, treat as
     # multi-variant and reject.
     return any(sig != target_signature for sig in signatures)
+
+
+def contains_multi_storage_listing(haystack_text):
+    """Return True when listing text advertises multiple storage options.
+
+    Why this exists:
+    - Many marketplace cards show one "from" price while listing several
+      capacities (for example "128GB | 256GB | 512GB").
+    - That card-level price is not guaranteed to be for the requested storage,
+      so we treat multi-storage cards as unsafe for capacity-specific scraping.
+
+    Rule:
+    - Extract storage-like tokens (`\\d+gb?`, with a 2-4 digit guard).
+    - Normalize to distinct numeric capacities.
+    - Reject only when more than one *distinct* capacity is present.
+
+    Distinct-value matching matters because many cards repeat the same storage
+    in both title and subtitle metadata (for example "128GB ... 128 GB ...").
+    Those are single-storage cards and should remain eligible.
+    """
+    text = haystack_text or ""
+    capacities = {match.group(1) for match in _STORAGE_TOKEN_RE.finditer(text)}
+
+    # Expand compact forms like "128/256GB" into {"128", "256"}.
+    for match in _COMPACT_MULTI_STORAGE_RE.finditer(text):
+        for value in re.findall(r"\d{2,4}", match.group(1)):
+            capacities.add(value)
+
+    return len(capacities) > 1
