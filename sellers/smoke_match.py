@@ -130,6 +130,11 @@ def _variant_signatures_for_family(haystack_text, family_key):
 
         variants = []
         inline_suffix = match.group(1)
+        # Ignore number+unit tokens (e.g. "6gb", "5g") as model-family hits.
+        # Without this, titles that mention RAM/network specs can be misread as
+        # "other model variants" and valid listings get filtered out.
+        if inline_suffix and inline_suffix not in _VARIANT_TOKENS:
+            continue
         if inline_suffix and inline_suffix in _VARIANT_TOKENS:
             variants.append(inline_suffix)
 

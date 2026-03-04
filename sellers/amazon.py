@@ -108,9 +108,21 @@ def _card_matches_filters(card, model: Model, storage: Storage):
     if contains_other_model(title_text, model):
         return False
 
-    # Require an exact model phrase boundary so "Pixel 6" does not match "Pixel 6a".
-    model_pattern = r"\b" + r"\s+".join(re.escape(part) for part in str(model).lower().split()) + r"\b"
-    if not re.search(model_pattern, title_text):
+    model_tokens = str(model).lower().split()
+    model_phrases = [model_tokens]
+    # Amazon titles often omit the brand word even when query includes it
+    # (for example, "Pixel 6a" instead of "Google Pixel 6a").
+    # Accept both variants, still as exact phrase boundaries.
+    if len(model_tokens) >= 2:
+        model_phrases.append(model_tokens[1:])
+
+    has_model_match = False
+    for tokens in model_phrases:
+        model_pattern = r"\b" + r"\s+".join(re.escape(part) for part in tokens) + r"\b"
+        if re.search(model_pattern, title_text):
+            has_model_match = True
+            break
+    if not has_model_match:
         return False
 
     digits = str(storage)
