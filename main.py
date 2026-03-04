@@ -147,7 +147,10 @@ def build_parser():
         "--search-sellers",
         default=None,
         metavar="LIST",
-        help="Comma-separated sellers to search (e.g. \"swappa,ebay\").",
+        help=(
+            "Comma-separated sellers to search (e.g. \"swappa,ebay\"). "
+            "Supported sellers: swappa,ebay,amazon,backmarket."
+        ),
     )
     search_group.add_argument(
         "--search-models",
@@ -171,7 +174,10 @@ def build_parser():
         "--search-conditions",
         default=None,
         metavar="LIST",
-        help="Comma-separated condition list. Allowed values: good,best. Default: good,best.",
+        help=(
+            "Comma-separated condition list. "
+            "Supported conditions: good,best. Default: good,best."
+        ),
     )
     output_group = parser.add_argument_group("file output")
     output_group.add_argument(
