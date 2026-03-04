@@ -32,9 +32,6 @@ ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
 
 Use this when you want the current snapshot of scraped prices.
-
-If any known-good price no longer matches computed output, the run fails so you
-can investigate the seller parser drift.
 """.strip()
 
 CONDITION_FILTER_NOTE = (
@@ -134,7 +131,7 @@ def build_parser():
         description="Check phone listing prices from multiple sellers.",
         epilog=(
             "Known-good prices are manual spot-checks stored in data/known-prices.json. "
-            "If a current result does not match a known-good entry, the run stops so you can investigate."
+            "If a current result does not match one of those entries, the run stops so you can investigate."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
