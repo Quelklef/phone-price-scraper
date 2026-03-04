@@ -12,7 +12,14 @@ Model = str
 Storage = int
 
 
-KNOWN_MODELS: list[Model] = [
+def normalize_model_name(raw_model: str) -> Model:
+    # Canonicalize spacing/casing so differently-cased or differently-spaced
+    # user input resolves to the same model key.
+    words = raw_model.strip().split()
+    return " ".join(words).title()
+
+
+_RAW_KNOWN_MODELS: list[Model] = [
     "Pixel 6a",
     "Pixel 6",
     "Pixel 6 Pro",
@@ -35,6 +42,8 @@ KNOWN_MODELS: list[Model] = [
     "Pixel 10 Pro Fold",
 ]
 
+KNOWN_MODELS: list[Model] = [normalize_model_name(model) for model in _RAW_KNOWN_MODELS]
+
 KNOWN_STORAGES_GB: list[Storage] = [128, 256, 512]
 
 
@@ -52,7 +61,7 @@ class ModelInfo:
 
 
 # Sourced from GSMArena model pages.
-MODEL_INFO: dict[Model, ModelInfo] = {
+_RAW_MODEL_INFO: dict[Model, ModelInfo] = {
     "Pixel 6a": ModelInfo(
         oem_min_support_end=datetime(2027, 7, 1),
         width_mm=71.8,
@@ -255,6 +264,10 @@ MODEL_INFO: dict[Model, ModelInfo] = {
         supports_wireless_charging=True,
         supports_pixelsnap_magnets=True,
     ),
+}
+
+MODEL_INFO: dict[Model, ModelInfo] = {
+    normalize_model_name(model): info for model, info in _RAW_MODEL_INFO.items()
 }
 
 

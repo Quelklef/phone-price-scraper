@@ -1,7 +1,7 @@
 import argparse
 
 import deps
-from core import Model, Storage
+from core import Model, Storage, normalize_model_name
 
 ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
@@ -45,8 +45,9 @@ def _parse_csv(raw_value, field_name):
 def _parse_models_csv(raw_value):
     selected: list[Model] = []
     for model in _parse_csv(raw_value, "model"):
-        if model not in selected:
-            selected.append(model)
+        normalized = normalize_model_name(model)
+        if normalized not in selected:
+            selected.append(normalized)
     return selected
 
 

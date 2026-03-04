@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from core import Condition, KNOWN_MODELS, Model, Storage
+from core import Condition, KNOWN_MODELS, Model, Storage, normalize_model_name
 
 # Partial expected best-deal checks across all sources.
 # IMPORTANT: Do not change known prices without explicit user confirmation.
@@ -27,7 +27,7 @@ def _legacy_model_name_to_display_name(name):
 
 
 def _normalize_model(raw_model):
-    model = _legacy_model_name_to_display_name(raw_model).strip()
+    model = normalize_model_name(_legacy_model_name_to_display_name(raw_model))
     if not model:
         raise ValueError(f"Invalid empty model in known-prices.json: {raw_model!r}")
     return model

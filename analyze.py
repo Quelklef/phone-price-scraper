@@ -3,7 +3,7 @@ from datetime import datetime
 from itertools import product
 
 import deps
-from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, MODEL_INFO, Model, Storage
+from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, MODEL_INFO, Model, Storage, normalize_model_name
 from core import KnownPriceMismatchError
 import glyphs
 from known_prices import KNOWN_PRICES
@@ -200,7 +200,7 @@ def run(
         known_price_xref_count = 0
         known_price_xref_by_seller = {seller.key: 0 for seller in SELLERS}
         today = datetime.now()
-        base_info = MODEL_INFO["Pixel 6a"]
+        base_info = MODEL_INFO[normalize_model_name("Pixel 6a")]
         base_area = base_info.width_mm * base_info.height_mm
         base_weight = base_info.weight_g
         # Model geometry/support metrics are invariant across seller/condition/storage.
