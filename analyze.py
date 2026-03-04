@@ -147,9 +147,14 @@ def run(
     search_sellers: list[str] | None = None,
     search_models: list[Model] | None = None,
     search_storages: list[Storage] | None = None,
+    search_conditions: list[str] | None = None,
 ):
     with deps.timing.time_stage("program"):
         pretty_log.set_model_width_from_models(search_models or [])
+        active_conditions = [
+            condition for condition in Condition
+            if search_conditions is None or condition.value in search_conditions
+        ]
         active_sellers = [
             seller for seller in SELLERS
             if search_sellers is None or seller.key in search_sellers
@@ -165,7 +170,7 @@ def run(
                 search_models=search_models,
                 search_storages=search_storages,
             ),
-            Condition,
+            active_conditions,
             active_sellers,
         ):
             seller_name = seller.key
@@ -225,4 +230,9 @@ if __name__ == "__main__":
     from main import DEFAULT_SEARCH_MODELS
 
     deps.init_deps(profile_performance=False, unicode=True, colors=True)
-    run(profile_performance=False, search_models=list(DEFAULT_SEARCH_MODELS), search_storages=[128, 256, 512])
+    run(
+        profile_performance=False,
+        search_models=list(DEFAULT_SEARCH_MODELS),
+        search_storages=[128, 256, 512],
+        search_conditions=["good", "best"],
+    )

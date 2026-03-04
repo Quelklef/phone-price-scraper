@@ -38,9 +38,7 @@ can investigate the seller parser drift.
 """.strip()
 
 CONDITION_FILTER_NOTE = (
-    "Note: There is no --search-conditions flag. "
-    "Each seller uses different condition controls, so one shared condition filter would be misleading. "
-    "The scraper already applies condition mapping per seller for you."
+    "Note: --search-conditions is limited to the known condition set: good,best."
 )
 
 
@@ -112,6 +110,24 @@ def _parse_sellers_csv(raw_value):
     return selected
 
 
+def _parse_conditions_csv(raw_value):
+    selected = []
+    invalid = []
+    allowed = ("good", "best")
+    for item in _parse_csv(raw_value, "condition"):
+        token = item.strip().lower()
+        if token not in allowed:
+            invalid.append(item)
+            continue
+        if token not in selected:
+            selected.append(token)
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"Unknown condition values: {', '.join(invalid)}. Valid conditions: good,best"
+        )
+    return selected
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
@@ -153,6 +169,12 @@ def build_parser():
             "Comma-separated storage list to search (e.g. \"128gb,256gb\"). "
             "Default: 128gb,256gb,512gb."
         ),
+    )
+    search_group.add_argument(
+        "--search-conditions",
+        default=None,
+        metavar="LIST",
+        help="Comma-separated condition list. Allowed values: good,best. Default: good,best.",
     )
     output_group = parser.add_argument_group("file output")
     output_group.add_argument(
@@ -227,6 +249,11 @@ def parse_args():
         if args.search_sellers is not None
         else None
     )
+    args.search_conditions = (
+        _parse_conditions_csv(args.search_conditions)
+        if args.search_conditions is not None
+        else ["good", "best"]
+    )
     return parser, args
 
 
@@ -246,6 +273,7 @@ def main():
         search_sellers=args.search_sellers,
         search_models=args.search_models,
         search_storages=args.search_storages,
+        search_conditions=args.search_conditions,
     )
 
 
