@@ -45,7 +45,7 @@ def build_search_url(model: Model, condition: Condition, storage: Storage):
       silently change result sets.
     """
     storage_raw = str(storage)
-    model_query = f"Google {model}"
+    model_query = str(model)
     model_encoded = quote(quote(model_query, safe=""), safe="")
     status_encoded = quote(quote("Factory Unlocked", safe=""), safe="")
 

@@ -21,18 +21,46 @@ import re
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import deps
-from core import Condition, LogicExtractionError, Model, Storage
+from core import Condition, LogicExtractionError, Model, Storage, normalize_model_name
 from lxml import html as lxml_html
 import requests
 from sellers.spec import SellerSpec
 
 _CONDITION_GROUP_LABEL = "Condition"
 _STORAGE_GROUP_LABEL = "Storage (GB)"
+_BACKMARKET_MODEL_SLUGS = {
+    normalize_model_name("Pixel 6a"): "google-pixel-6a",
+    normalize_model_name("Pixel 6"): "google-pixel-6",
+    normalize_model_name("Pixel 6 Pro"): "google-pixel-6-pro",
+    normalize_model_name("Pixel 7a"): "google-pixel-7a",
+    normalize_model_name("Pixel 7"): "google-pixel-7",
+    normalize_model_name("Pixel 7 Pro"): "google-pixel-7-pro",
+    normalize_model_name("Pixel Tablet"): "google-pixel-tablet",
+    normalize_model_name("Pixel Fold"): "google-pixel-fold",
+    normalize_model_name("Pixel 8a"): "google-pixel-8a",
+    normalize_model_name("Pixel 8"): "google-pixel-8",
+    normalize_model_name("Pixel 8 Pro"): "google-pixel-8-pro",
+    normalize_model_name("Pixel 9a"): "google-pixel-9a",
+    normalize_model_name("Pixel 9"): "google-pixel-9",
+    normalize_model_name("Pixel 9 Pro"): "google-pixel-9-pro",
+    normalize_model_name("Pixel 9 Pro XL"): "google-pixel-9-pro-xl",
+    normalize_model_name("Pixel 9 Pro Fold"): "google-pixel-9-pro-fold",
+    normalize_model_name("Pixel 10"): "google-pixel-10",
+    normalize_model_name("Pixel 10 Pro"): "google-pixel-10-pro",
+    normalize_model_name("Pixel 10 Pro XL"): "google-pixel-10-pro-xl",
+    normalize_model_name("Pixel 10 Pro Fold"): "google-pixel-10-pro-fold",
+}
 
 
 def _model_slug(model: Model):
-    """Map model enum value to BackMarket product slug suffix."""
-    return f"google-{str(model).lower().replace(' ', '-')}"
+    """Map model name to BackMarket product slug suffix."""
+    slug = _BACKMARKET_MODEL_SLUGS.get(model)
+    if slug is None:
+        raise LogicExtractionError(
+            f"BackMarket does not have a configured model slug for '{model}'. "
+            "Add it to _BACKMARKET_MODEL_SLUGS."
+        )
+    return slug
 
 
 def _storage_label(storage: Storage):

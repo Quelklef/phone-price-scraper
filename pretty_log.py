@@ -68,7 +68,7 @@ def banner():
         " |_|   |_|_|\\___|_| |_|\\__|\\__, | |____/ \\___|_|  \\__,_| .__/ \\___|_|   ",
         "                           |___/                       |_|                ",
     ]
-    _emit(_paint(_icon("✨ Pixel Price Radar ✨"), BOLD, MAGENTA))
+    _emit(_paint(_icon("✨ Phone Price Radar ✨"), BOLD, MAGENTA))
     for line in art:
         _emit(_paint(line, CYAN))
     _emit(_paint(glyphs.H_HEAVY * 90, DIM, BLUE))

@@ -1,7 +1,7 @@
 import argparse
 
 import deps
-from core import Model, Storage, normalize_model_name
+from core import KNOWN_MODELS, Model, Storage, normalize_model_name
 
 SUPPORTED_SELLER_KEYS = ("swappa", "ebay", "amazon", "backmarket")
 DEFAULT_SEARCH_STORAGES: list[Storage] = [128, 256, 512]
@@ -175,7 +175,7 @@ def parse_args():
     args.search_models = (
         _parse_models_csv(args.search_models)
         if args.search_models is not None
-        else None
+        else list(KNOWN_MODELS)
     )
     args.search_storages = (
         _parse_storages_csv(args.search_storages)

@@ -16,24 +16,50 @@ from lxml import html as lxml_html
 import requests
 
 import deps
-from core import Condition, Model, Storage
+from core import Condition, Model, Storage, normalize_model_name
 from core import LogicExtractionError
 from sellers.spec import SellerSpec
 
 _FILTER_FORM_XPATH = "//*[@id='filter_form']"
 _CARD_XPATH = "//*[contains(concat(' ', normalize-space(@class), ' '), ' xui_card ')]"
 
+_SWAPPA_MODEL_SLUGS = {
+    normalize_model_name("Pixel 6a"): "6a",
+    normalize_model_name("Pixel 6"): "6",
+    normalize_model_name("Pixel 6 Pro"): "6-pro",
+    normalize_model_name("Pixel 7a"): "7a",
+    normalize_model_name("Pixel 7"): "7",
+    normalize_model_name("Pixel 7 Pro"): "7-pro",
+    normalize_model_name("Pixel Tablet"): "tablet",
+    normalize_model_name("Pixel Fold"): "fold",
+    normalize_model_name("Pixel 8a"): "8a",
+    normalize_model_name("Pixel 8"): "8",
+    normalize_model_name("Pixel 8 Pro"): "8-pro",
+    normalize_model_name("Pixel 9a"): "9a",
+    normalize_model_name("Pixel 9"): "9",
+    normalize_model_name("Pixel 9 Pro"): "9-pro",
+    normalize_model_name("Pixel 9 Pro XL"): "9-pro-xl",
+    normalize_model_name("Pixel 9 Pro Fold"): "9-pro-fold",
+    normalize_model_name("Pixel 10"): "10",
+    normalize_model_name("Pixel 10 Pro"): "10-pro",
+    normalize_model_name("Pixel 10 Pro XL"): "10-pro-xl",
+    normalize_model_name("Pixel 10 Pro Fold"): "10-pro-fold",
+}
 
-def to_kebab_case(model: Model):
-    """Convert model display text to Swappa slug fragment."""
-    # Model labels are "Pixel ..."; Swappa slug path already prefixes "google-pixel-".
-    model_without_prefix = model.removeprefix("Pixel ")
-    return model_without_prefix.lower().replace(" ", "-")
+
+def _swappa_model_slug_or_fail(model: Model):
+    slug = _SWAPPA_MODEL_SLUGS.get(model)
+    if slug is None:
+        raise LogicExtractionError(
+            f"Swappa does not have a configured model slug for '{model}'. "
+            "Add it to _SWAPPA_MODEL_SLUGS."
+        )
+    return slug
 
 
 def build_listing_url(model: Model, condition: str, storage: Storage):
     """Build Swappa listing query URL for one condition variant."""
-    model_slug = to_kebab_case(model)
+    model_slug = _swappa_model_slug_or_fail(model)
     return (
         f"https://swappa.com/listings/google-pixel-{model_slug}"
         f"?condition={condition}&carrier=unlocked"

@@ -14,7 +14,11 @@ def normalize_model_name(raw_model: str) -> Model:
     # Canonicalize spacing/casing so differently-cased or differently-spaced
     # user input resolves to the same model key.
     words = raw_model.strip().split()
-    return " ".join(words).title()
+    base = " ".join(words).title()
+    lower = base.lower()
+    if lower.startswith("pixel "):
+        return f"Google {base}"
+    return base
 
 
 _RAW_KNOWN_MODELS: list[Model] = [

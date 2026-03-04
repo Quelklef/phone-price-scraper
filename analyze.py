@@ -2,7 +2,7 @@ import csv
 from itertools import product
 
 import deps
-from core import Condition, KNOWN_MODELS, Model, Storage
+from core import Condition, Model, Storage
 from core import KnownPriceMismatchError
 import glyphs
 from known_prices import KNOWN_PRICES
@@ -12,13 +12,14 @@ from sellers.registry import SELLERS
 
 def _iter_supported_model_storage_pairs(
     *,
-    search_models: list[Model] | None = None,
+    search_models: list[Model],
     search_storages: list[Storage],
 ):
-    models = KNOWN_MODELS if search_models is None else search_models
+    if search_models is None:
+        raise ValueError("search_models must be provided.")
     if search_storages is None:
         raise ValueError("search_storages must be provided.")
-    for model in models:
+    for model in search_models:
         for storage in search_storages:
             yield model, storage
 
@@ -209,5 +210,7 @@ def run(
 
 
 if __name__ == "__main__":
+    from core import KNOWN_MODELS
+
     deps.init_deps(profile_performance=False, unicode=True, colors=True)
-    run(profile_performance=False, search_storages=[128, 256, 512])
+    run(profile_performance=False, search_models=list(KNOWN_MODELS), search_storages=[128, 256, 512])

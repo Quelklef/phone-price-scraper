@@ -47,7 +47,7 @@ def build_search_url(model: Model, storage: Storage, condition: Condition, page:
     """
     # Use default "Featured" ordering (omit sort param). Price sort can hide matches.
     storage_raw = str(storage)
-    query = f"Google {model} {storage_raw}GB unlocked"
+    query = f"{model} {storage_raw}GB unlocked"
     rh_value = f"p_n_condition-type%3A{CONDITION_FILTER_EXPR[condition]}"
     params = {
         "k": quote_plus(query),

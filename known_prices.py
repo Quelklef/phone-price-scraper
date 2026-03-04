@@ -19,8 +19,14 @@ def _legacy_model_name_to_display_name(name):
         suffix = name.removeprefix("PIXEL_").lower().replace("_", " ")
         candidate = f"Pixel {suffix}"
         normalized_candidate = "".join(candidate.lower().split())
+        normalized_candidate_nobrand = normalized_candidate.removeprefix("google")
         for known_model in KNOWN_MODELS:
-            if "".join(known_model.lower().split()) == normalized_candidate:
+            normalized_known = "".join(known_model.lower().split())
+            normalized_known_nobrand = normalized_known.removeprefix("google")
+            if (
+                normalized_known == normalized_candidate
+                or normalized_known_nobrand == normalized_candidate_nobrand
+            ):
                 return known_model
         return candidate
     return name
