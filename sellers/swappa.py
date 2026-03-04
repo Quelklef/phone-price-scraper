@@ -107,7 +107,7 @@ def _swappa_model_slug_or_fail(model: Model):
     if slug is None:
         raise LogicExtractionError(
             f"Swappa does not have a configured model slug for '{model}'. "
-            "Add it to _SWAPPA_MODEL_SLUGS."
+            "Either add it to _SWAPPA_MODEL_SLUGS or exclude swappa via --search-sellers."
         )
     return slug
 

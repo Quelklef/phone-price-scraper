@@ -88,7 +88,7 @@ def _model_slug(model: Model):
     if slug is None:
         raise LogicExtractionError(
             f"BackMarket does not have a configured model slug for '{model}'. "
-            "Add it to _BACKMARKET_MODEL_SLUGS."
+            "Either add it to _BACKMARKET_MODEL_SLUGS or exclude backmarket via --search-sellers."
         )
     return slug
 
