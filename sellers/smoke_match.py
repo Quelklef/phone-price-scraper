@@ -134,6 +134,9 @@ def _variant_signatures_for_family(haystack_text, family_key):
             variants.append(inline_suffix)
 
         for next_word in words[idx + 1 : idx + 4]:
+            # Do not merge variants across another same-family token.
+            if token_re.match(next_word):
+                break
             if next_word in _VARIANT_TOKENS:
                 variants.append(next_word)
                 continue
