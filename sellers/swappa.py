@@ -115,10 +115,11 @@ def _swappa_model_slug_or_fail(model: Model):
 def build_listing_url(model: Model, condition: str, storage: Storage):
     """Build Swappa listing query URL for one condition variant."""
     model_slug = _swappa_model_slug_or_fail(model)
+    storage_token = f"{storage}gb"
     return (
         f"https://swappa.com/listings/{model_slug}"
         f"?condition={condition}&carrier=unlocked"
-        f"&storage={storage}&sort=price_low"
+        f"&storage={storage_token}&sort=price_low"
     )
 
 
@@ -184,7 +185,7 @@ def _filter_form_matches_query(doc, requested_condition, requested_storage):
     expected = {
         "condition": requested_condition,
         "carrier": "unlocked",
-        "storage": requested_storage,
+        "storage": f"{requested_storage}gb",
         "sort": "price_low",
     }
     for name, expected_value in expected.items():
