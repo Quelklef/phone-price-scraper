@@ -1,6 +1,5 @@
 import csv
 from itertools import product
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import deps
 from core import Condition, Model, Storage
@@ -109,28 +108,6 @@ def _query_url_text(urls):
     return " | ".join(sorted(urls))
 
 
-def _normalize_query_url_for_compare(url):
-    """Canonicalize query URL for stable known-price comparisons.
-
-    We intentionally normalize case for query-text fields commonly used by
-    sellers (`k`, `_nkw`, `Model`) so harmless casing changes (e.g. `6a` vs
-    `6A`) do not trigger false mismatch errors.
-    """
-    parts = urlsplit(url)
-    normalized_pairs = []
-    for key, value in parse_qsl(parts.query, keep_blank_values=True):
-        if key in {"k", "_nkw", "Model"}:
-            value = value.lower()
-        normalized_pairs.append((key, value))
-    normalized_pairs.sort()
-    normalized_query = urlencode(normalized_pairs, doseq=True)
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path, normalized_query, ""))
-
-
-def _normalized_query_urls_for_compare(urls):
-    return frozenset(_normalize_query_url_for_compare(url) for url in urls)
-
-
 def _price_text(price):
     return "no listing" if price is None else f"${price:.2f}"
 
@@ -155,9 +132,7 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
     expected_urls, expected_price = expected
     got_url_text = _query_url_text(query_urls)
     expected_url_text = _query_url_text(expected_urls)
-    got_urls_normalized = _normalized_query_urls_for_compare(query_urls)
-    expected_urls_normalized = _normalized_query_urls_for_compare(expected_urls)
-    if got_urls_normalized != expected_urls_normalized or not _prices_match(expected_price, lowest_price):
+    if query_urls != expected_urls or not _prices_match(expected_price, lowest_price):
         mismatch(
             "Expected:\n"
             f"  query_url(s): {expected_url_text}\n"
