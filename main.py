@@ -118,10 +118,7 @@ def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
         description="Check phone listing prices from multiple sellers.",
-        epilog=(
-            "Known-price mismatches are treated as failures to keep seller parsers honest over time.\n\n"
-            + CONDITION_FILTER_NOTE
-        ),
+        epilog="Known-price mismatches are treated as failures to keep seller parsers honest over time.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     help_group = parser.add_argument_group("help")
@@ -131,7 +128,7 @@ def build_parser():
         action="help",
         help="Show this help message and exit.",
     )
-    search_group = parser.add_argument_group("search scope")
+    search_group = parser.add_argument_group("search scope", CONDITION_FILTER_NOTE)
     search_group.add_argument(
         "--search-sellers",
         default=None,
