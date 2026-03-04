@@ -16,7 +16,7 @@ from lxml import html as lxml_html
 import requests
 
 import deps
-from core import Condition, Model, Storage
+from core import Condition
 from core import LogicExtractionError
 from sellers.spec import SellerSpec
 
@@ -24,14 +24,14 @@ _FILTER_FORM_XPATH = "//*[@id='filter_form']"
 _CARD_XPATH = "//*[contains(concat(' ', normalize-space(@class), ' '), ' xui_card ')]"
 
 
-def to_kebab_case(model: Model):
-    """Convert enum model text to Swappa slug fragment."""
-    # Model enum values are "Pixel ..."; Swappa slug path already prefixes "google-pixel-".
+def to_kebab_case(model: str):
+    """Convert model display text to Swappa slug fragment."""
+    # Model labels are "Pixel ..."; Swappa slug path already prefixes "google-pixel-".
     model_without_prefix = model.removeprefix("Pixel ")
     return model_without_prefix.lower().replace(" ", "-")
 
 
-def build_listing_url(model: Model, condition: str, storage: Storage):
+def build_listing_url(model: str, condition: str, storage: int):
     """Build Swappa listing query URL for one condition variant."""
     model_slug = to_kebab_case(model)
     return (
@@ -113,7 +113,7 @@ def _filter_form_matches_query(doc, requested_condition, requested_storage):
     return True
 
 
-def get_lowest_price(model: Model, condition: Condition, storage: Storage):
+def get_lowest_price(model: str, condition: Condition, storage: int):
     """Public seller entrypoint.
 
     For `Condition.BEST`, Swappa is queried with multiple acceptable condition

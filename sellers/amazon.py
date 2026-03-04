@@ -22,7 +22,7 @@ from urllib.parse import quote_plus, urljoin, urlsplit, urlunsplit
 from lxml import html as lxml_html
 
 import deps
-from core import Condition, Model, Storage
+from core import Condition
 from core import LogicExtractionError
 from sellers.smoke_match import contains_other_model
 from sellers.spec import SellerSpec
@@ -36,7 +36,7 @@ CONDITION_FILTER_EXPR = {
 }
 
 
-def build_search_url(model: Model, storage: Storage, condition: Condition, page: int):
+def build_search_url(model: str, storage: int, condition: Condition, page: int):
     """Build canonical Amazon SERP URL for one model/condition/storage/page.
 
     Notes:
@@ -46,7 +46,7 @@ def build_search_url(model: Model, storage: Storage, condition: Condition, page:
     - Condition filtering is controlled by `rh` facet expression.
     """
     # Use default "Featured" ordering (omit sort param). Price sort can hide matches.
-    storage_raw = "".join(ch for ch in storage if ch.isdigit())
+    storage_raw = str(storage)
     query = f"Google {model} {storage_raw}GB unlocked"
     rh_value = f"p_n_condition-type%3A{CONDITION_FILTER_EXPR[condition]}"
     params = {
@@ -85,7 +85,7 @@ def _card_title_text(card):
     return " ".join(" ".join(title.itertext()).strip().lower().split())
 
 
-def _card_matches_filters(card, model: Model, storage: Storage):
+def _card_matches_filters(card, model: str, storage: int):
     """Content-level guard for candidate search cards.
 
     Even with query parameters, Amazon often includes cards for neighboring
@@ -113,7 +113,7 @@ def _card_matches_filters(card, model: Model, storage: Storage):
     if not re.search(model_pattern, title_text):
         return False
 
-    digits = "".join(ch for ch in storage if ch.isdigit())
+    digits = str(storage)
     if not re.search(rf"\b{digits}\s*g(?:b)?\b", title_text):
         return False
 
@@ -214,7 +214,7 @@ def _card_extract_listing_url(card):
     return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
 
 
-def extract_lowest_listing(html, model: Model, storage: Storage):
+def extract_lowest_listing(html, model: str, storage: int):
     """Extract lowest valid listing from one Amazon SERP page.
 
     This function is intentionally strict:
@@ -262,7 +262,7 @@ def extract_lowest_listing(html, model: Model, storage: Storage):
         return min(prices, key=lambda x: x[0])
 
 
-def get_lowest_price(model: Model, condition: Condition, storage: Storage):
+def get_lowest_price(model: str, condition: Condition, storage: int):
     """Public seller entrypoint.
 
     Policy:

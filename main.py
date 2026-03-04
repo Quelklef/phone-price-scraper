@@ -1,8 +1,6 @@
 import argparse
-import re
 
 import deps
-from core import Model, Storage
 
 ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
@@ -34,43 +32,46 @@ class _UnicodeAction(argparse.Action):
         setattr(namespace, self.dest, enabled)
 
 
-def _normalize_token(value):
-    return re.sub(r"[^a-z0-9]+", "", value.lower())
-
-
-def _parse_enum_csv(raw_value, enum_cls, field_name):
+def _parse_csv(raw_value, field_name):
     raw_items = [item.strip() for item in raw_value.split(",")]
     if any(not item for item in raw_items):
         raise argparse.ArgumentTypeError(
             f"Invalid {field_name} list: empty item found. Use comma-separated values."
         )
+    return raw_items
 
-    lookup = {}
-    for member in enum_cls:
-        for candidate in {member.name, member.value}:
-            lookup[_normalize_token(candidate)] = member
 
+def _parse_models_csv(raw_value):
+    selected = []
+    for model in _parse_csv(raw_value, "model"):
+        if model not in selected:
+            selected.append(model)
+    return selected
+
+
+def _parse_storages_csv(raw_value):
     selected = []
     invalid = []
-    for item in raw_items:
-        resolved = lookup.get(_normalize_token(item))
-        if resolved is None:
+    for item in _parse_csv(raw_value, "storage"):
+        token = item.strip().lower()
+        if token.endswith("gb"):
+            token = token[:-2].strip()
+        if not token.isdigit():
             invalid.append(item)
             continue
-        if resolved not in selected:
-            selected.append(resolved)
-
+        storage_gb = int(token)
+        if storage_gb not in selected:
+            selected.append(storage_gb)
     if invalid:
-        valid = ", ".join(member.value for member in enum_cls)
         raise argparse.ArgumentTypeError(
-            f"Unknown {field_name}: {', '.join(invalid)}. Valid values: {valid}"
+            f"Unknown storage values: {', '.join(invalid)}. Example: 128gb,256gb"
         )
     return selected
 
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Check used Pixel phone prices from multiple sellers.",
+        description="Check phone listing prices from multiple sellers.",
         epilog=(
             "Known-price mismatches are treated as failures to keep seller parsers honest over time.\n\n"
             + CONDITION_FILTER_NOTE
@@ -121,8 +122,8 @@ def build_parser():
         default=None,
         metavar="LIST",
         help=(
-            "Comma-separated model list to search (e.g. \"Pixel 6a,Pixel 8 Pro\" or "
-            "\"PIXEL_6A,PIXEL_8_PRO\")."
+            "Comma-separated model list to search (any text labels; "
+            "e.g. \"Pixel 6a,Pixel 8 Pro,Some Future Phone\")."
         ),
     )
     search_group.add_argument(
@@ -140,12 +141,12 @@ def parse_args():
     parser = build_parser()
     args = parser.parse_args()
     args.search_models = (
-        _parse_enum_csv(args.search_models, Model, "model")
+        _parse_models_csv(args.search_models)
         if args.search_models is not None
         else None
     )
     args.search_storages = (
-        _parse_enum_csv(args.search_storages, Storage, "storage")
+        _parse_storages_csv(args.search_storages)
         if args.search_storages is not None
         else None
     )

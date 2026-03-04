@@ -1,23 +1,68 @@
 import json
 from pathlib import Path
 
-from core import Condition, Model, Storage
+from core import Condition, KNOWN_MODELS
 
 # Partial expected best-deal checks across all sources.
 # IMPORTANT: Do not change known prices without explicit user confirmation.
 # Stored in JSON for easier editing and non-code diffs.
 _KNOWN_PRICES_PATH = Path(__file__).resolve().parent / "data" / "known-prices.json"
 KNOWN_PRICES_PATH = _KNOWN_PRICES_PATH
-KnownPriceKey = tuple[str, Model, Storage, Condition]
+KnownPriceKey = tuple[str, str, int, Condition]
 KnownPriceValue = tuple[frozenset[str], float | None]
+
+
+def _legacy_model_name_to_display_name(name):
+    if not isinstance(name, str):
+        raise ValueError(f"Invalid model name in known-prices.json: {name!r}")
+    if name.startswith("PIXEL_"):
+        suffix = name.removeprefix("PIXEL_").lower().replace("_", " ")
+        candidate = f"Pixel {suffix}"
+        normalized_candidate = "".join(candidate.lower().split())
+        for known_model in KNOWN_MODELS:
+            if "".join(known_model.lower().split()) == normalized_candidate:
+                return known_model
+        return candidate
+    return name
+
+
+def _normalize_model(raw_model):
+    model = _legacy_model_name_to_display_name(raw_model).strip()
+    if not model:
+        raise ValueError(f"Invalid empty model in known-prices.json: {raw_model!r}")
+    return model
+
+
+def _normalize_storage_gb(raw_storage):
+    if isinstance(raw_storage, int):
+        return raw_storage
+    if isinstance(raw_storage, str):
+        text = raw_storage.strip().lower()
+        if text.startswith("gb_"):
+            text = text.removeprefix("gb_")
+        if text.endswith("gb"):
+            text = text[:-2]
+        if text.isdigit():
+            return int(text)
+    raise ValueError(f"Invalid storage in known-prices.json: {raw_storage!r}")
+
+
+def _normalize_condition(raw_condition):
+    if isinstance(raw_condition, str):
+        if raw_condition in Condition.__members__:
+            return Condition[raw_condition]
+        for condition in Condition:
+            if raw_condition.lower() == condition.value:
+                return condition
+    raise ValueError(f"Invalid condition in known-prices.json: {raw_condition!r}")
 
 
 def _key_for_row(row):
     return (
         row["seller"],
-        Model[row["model"]],
-        Storage[row["storage"]],
-        Condition[row["condition"]],
+        _normalize_model(row["model"]),
+        _normalize_storage_gb(row["storage"]),
+        _normalize_condition(row["condition"]),
     )
 
 

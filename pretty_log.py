@@ -1,4 +1,4 @@
-from core import Model
+from core import KNOWN_MODELS
 import deps
 import glyphs
 
@@ -15,7 +15,7 @@ MAGENTA = "\033[35m"
 CYAN = "\033[36m"
 WHITE = "\033[37m"
 SELLER_W = 10
-MODEL_W = max(len(model.value) for model in Model)
+MODEL_W = max(len(model) for model in KNOWN_MODELS)
 _VERIFIED_MARKER = "(v)"
 _UNVERIFIED_MARKER = " " * len(_VERIFIED_MARKER)
 _KV_LABEL_W = 11

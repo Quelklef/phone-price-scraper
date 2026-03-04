@@ -3,7 +3,7 @@ from datetime import datetime
 from itertools import product
 
 import deps
-from core import Condition, Model, MODEL_INFO, Storage
+from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, MODEL_INFO
 from core import KnownPriceMismatchError
 import glyphs
 from known_prices import KNOWN_PRICES
@@ -12,15 +12,21 @@ from sellers.registry import SELLERS
 
 
 def _iter_supported_model_storage_pairs(*, search_models=None, search_storages=None):
-    for model in Model:
-        if search_models is not None and model not in search_models:
-            continue
-        supported_storages = MODEL_INFO[model].supported_storages
-        for storage in Storage:
-            if search_storages is not None and storage not in search_storages:
-                continue
-            if storage in supported_storages:
+    models = KNOWN_MODELS if search_models is None else search_models
+    for model in models:
+        if search_storages is not None:
+            for storage in search_storages:
                 yield model, storage
+            continue
+
+        model_info = MODEL_INFO.get(model)
+        if model_info is not None:
+            for storage in sorted(model_info.supported_storages):
+                yield model, storage
+            continue
+
+        for storage in KNOWN_STORAGES_GB:
+            yield model, storage
 
 
 def compute_support_years_remaining(support_end_date, today):
@@ -36,6 +42,10 @@ def compute_model_metrics(model_info, *, today, base_area, base_weight):
         (area / base_area) * 100.0,
         (weight / base_weight) * 100.0,
     )
+
+
+def _default_model_metrics():
+    return None, None, None
 
 
 def print_results_table(results):
@@ -80,7 +90,11 @@ def _results_table_rows(results):
             "yes" if row["supports_wireless_charging"] else "no",
             "yes" if row["supports_pixelsnap_magnets"] else "no",
             "N/A" if row["lowest_price"] is None else f"${row['lowest_price']:.2f}",
-            f"{row['support_years_remaining']:.2f}",
+            (
+                "N/A"
+                if row["support_years_remaining"] is None
+                else f"{row['support_years_remaining']:.2f}"
+            ),
             "N/A" if row["dollars_per_year_support"] is None else f"${row['dollars_per_year_support']:.2f}",
             row["listing_url"] or "N/A",
         ] for row in sorted_results]
@@ -116,7 +130,11 @@ def write_results_csv(results, output_path):
             "N/A" if row["model_weight_pct_6a"] is None else f"{row['model_weight_pct_6a']:.0f}%",
             "yes" if row["supports_wireless_charging"] else "no",
             "yes" if row["supports_pixelsnap_magnets"] else "no",
-            f"{row['support_years_remaining']:.2f}",
+            (
+                "N/A"
+                if row["support_years_remaining"] is None
+                else f"{row['support_years_remaining']:.2f}"
+            ),
             "",
             row["seller"],
             row["condition"],
@@ -148,7 +166,7 @@ def _prices_match(expected_price, actual_price):
 def validate_known_price_row(seller, model, storage, condition, lowest_price, query_urls):
     def mismatch(msg):
         raise KnownPriceMismatchError(
-            f"Known price mismatch for {seller}/{model.value}/{storage.value}/{condition.value}: {msg}"
+            f"Known price mismatch for {seller}/{model}/{storage}gb/{condition.value}: {msg}"
         )
 
     key = (seller, model, storage, condition)
@@ -178,7 +196,7 @@ def run(
         known_price_xref_count = 0
         known_price_xref_by_seller = {seller.key: 0 for seller in SELLERS}
         today = datetime.now()
-        base_info = MODEL_INFO[Model.PIXEL_6A]
+        base_info = MODEL_INFO["Pixel 6a"]
         base_area = base_info.width_mm * base_info.height_mm
         base_weight = base_info.weight_g
         # Model geometry/support metrics are invariant across seller/condition/storage.
@@ -204,17 +222,24 @@ def run(
         ):
             seller_name = seller.key
             get_price = seller.get_lowest_price
-            model_info = MODEL_INFO[model]
-            model_name = model.value
+            model_info = MODEL_INFO.get(model)
+            model_name = model
             condition_name = condition.value
-            storage_name = storage.value
-            support_years_remaining, model_area_pct_6a, model_weight_pct_6a = model_metrics[model]
+            storage_name = f"{storage}gb"
+            support_years_remaining, model_area_pct_6a, model_weight_pct_6a = model_metrics.get(
+                model,
+                _default_model_metrics(),
+            )
 
             with deps.timing.time_stage(f"seller.{seller_name}"):
                 query_urls, lowest_price, listing_url = get_price(model, condition, storage)
             dollars_per_year_support = (
                 lowest_price / support_years_remaining
-                if lowest_price is not None and support_years_remaining > 0
+                if (
+                    lowest_price is not None
+                    and support_years_remaining is not None
+                    and support_years_remaining > 0
+                )
                 else None
             )
 
@@ -232,8 +257,12 @@ def run(
                 "model": model_name,
                 "condition": condition_name,
                 "storage": storage_name,
-                "supports_wireless_charging": model_info.supports_wireless_charging,
-                "supports_pixelsnap_magnets": model_info.supports_pixelsnap_magnets,
+                "supports_wireless_charging": (
+                    model_info.supports_wireless_charging if model_info is not None else False
+                ),
+                "supports_pixelsnap_magnets": (
+                    model_info.supports_pixelsnap_magnets if model_info is not None else False
+                ),
                 "model_area_pct_6a": model_area_pct_6a,
                 "model_weight_pct_6a": model_weight_pct_6a,
                 "lowest_price": lowest_price,

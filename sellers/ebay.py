@@ -19,7 +19,7 @@ from lxml import html as lxml_html
 import re
 
 import deps
-from core import Condition, Model, Storage
+from core import Condition
 from core import LogicExtractionError
 from sellers.spec import SellerSpec
 from sellers.smoke_match import (
@@ -35,7 +35,7 @@ CONDITION_TERMS = {
 }
 
 
-def build_search_url(model: Model, condition: Condition, storage: Storage):
+def build_search_url(model: str, condition: Condition, storage: int):
     """Build eBay search URL with encoded facet/query parameters.
 
     Notes on encoding:
@@ -44,7 +44,7 @@ def build_search_url(model: Model, condition: Condition, storage: Storage):
     - We keep this encoding style stable because small encoding shifts can
       silently change result sets.
     """
-    storage_raw = "".join(ch for ch in storage if ch.isdigit())
+    storage_raw = str(storage)
     model_query = f"Google {model}"
     model_encoded = quote(quote(model_query, safe=""), safe="")
     status_encoded = quote(quote("Factory Unlocked", safe=""), safe="")
@@ -63,7 +63,7 @@ def build_search_url(model: Model, condition: Condition, storage: Storage):
     return f"https://www.ebay.com/sch/i.html?{query}"
 
 
-def _card_matches_filters(card, model: Model, condition: Condition, storage: Storage):
+def _card_matches_filters(card, model: str, condition: Condition, storage: int):
     """Validate candidate result card text against expected quad.
 
     Checks include:
@@ -128,7 +128,7 @@ def _card_extract_listing_url(card):
     return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
 
 
-def extract_lowest_listing(html, model: Model, condition: Condition, storage: Storage):
+def extract_lowest_listing(html, model: str, condition: Condition, storage: int):
     """Extract lowest valid listing from one eBay search response.
 
     Important behavior:
@@ -177,7 +177,7 @@ def extract_lowest_listing(html, model: Model, condition: Condition, storage: St
         return min(prices, key=lambda x: x[0])
 
 
-def get_lowest_price(model: Model, condition: Condition, storage: Storage):
+def get_lowest_price(model: str, condition: Condition, storage: int):
     """Public seller entrypoint for eBay (single query URL)."""
     url = build_search_url(model, condition, storage)
     html = deps.http_cache.get(url)

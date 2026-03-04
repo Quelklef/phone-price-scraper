@@ -12,7 +12,7 @@ These checks are intentionally heuristic. They should bias toward safety
 
 import re
 
-from core import Model, Storage
+from core import KNOWN_MODELS
 
 
 def normalize_text(text):
@@ -21,19 +21,19 @@ def normalize_text(text):
     return "".join((text or "").lower().split())
 
 
-def _model_norm(model: Model):
+def _model_norm(model: str):
     """Canonical lowercased model name with collapsed whitespace."""
-    return " ".join(model.value.lower().split())
+    return " ".join(model.lower().split())
 
 
-def _model_tail(model: Model):
+def _model_tail(model: str):
     """Model name without leading 'pixel ' prefix (e.g. '8 pro')."""
     return _model_norm(model).removeprefix("pixel ").strip()
 
 
-def storage_terms(storage: Storage):
+def storage_terms(storage: int):
     # Accept both "gb" and "g" forms (e.g. "128gb" and "128g").
-    digits = "".join(ch for ch in storage if ch.isdigit())
+    digits = str(storage)
     return [f"{digits}gb", f"{digits}g"]
 
 
@@ -62,7 +62,7 @@ def _build_family_variants():
     multi-variant-list detection.
     """
     variants = {}
-    for model in Model:
+    for model in KNOWN_MODELS:
         tail = normalize_text(_model_tail(model))
         family_match = re.match(r"(\d+)", tail)
         if family_match is None:
@@ -75,7 +75,7 @@ def _build_family_variants():
 _FAMILY_VARIANTS = _build_family_variants()
 
 
-def passes_model_smoke_checks(haystack_text, target_model: Model):
+def passes_model_smoke_checks(haystack_text, target_model: str):
     """Shared model-level smoke checks used by marketplace seller parsers.
 
     Current policy:
@@ -89,11 +89,11 @@ def passes_model_smoke_checks(haystack_text, target_model: Model):
     return True
 
 
-def contains_other_model(haystack_text, target_model: Model):
+def contains_other_model(haystack_text, target_model: str):
     # Keep this coherent with normalize_text-based matching used by seller parsers.
     haystack = normalize_text(haystack_text)
     target_norm = normalize_text(_model_norm(target_model))
-    for model in Model:
+    for model in KNOWN_MODELS:
         if model == target_model:
             continue
         other_norm = normalize_text(_model_norm(model))
@@ -106,7 +106,7 @@ def contains_other_model(haystack_text, target_model: Model):
     return False
 
 
-def contains_multi_variant_model_list(haystack_text, target_model: Model):
+def contains_multi_variant_model_list(haystack_text, target_model: str):
     """Detect "variant list" model titles like "Pixel 8 - 8 Pro".
 
     Why this exists:
