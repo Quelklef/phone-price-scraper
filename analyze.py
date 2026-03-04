@@ -134,8 +134,12 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
     expected_url_text = _query_url_text(expected_urls)
     if query_urls != expected_urls or not _prices_match(expected_price, lowest_price):
         mismatch(
-            f"expected url={expected_url_text} price={_price_text(expected_price)}, "
-            f"got url={got_url_text} price={_price_text(lowest_price)}."
+            "Expected:\n"
+            f"  query_url(s): {expected_url_text}\n"
+            f"  computed_price: {_price_text(expected_price)}\n"
+            "Got:\n"
+            f"  query_url(s): {got_url_text}\n"
+            f"  computed_price: {_price_text(lowest_price)}"
         )
     return True
 
