@@ -32,6 +32,7 @@ ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
 
 Use this when you want the current snapshot of scraped prices.
+
 If any known-good price no longer matches computed output, the run fails so you
 can investigate the seller parser drift.
 """.strip()
