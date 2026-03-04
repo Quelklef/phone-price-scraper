@@ -1,0 +1,37 @@
+[
+  {
+    "seller": "swappa",
+    "model": "PIXEL_6A",
+    "storage": "GB_128",
+    "condition": "GOOD",
+    "urls_checked": [
+      "https://swappa.com/listings/google-pixel-6a?condition=good&carrier=unlocked&storage=128gb&sort=price_low"
+    ],
+    "computed_price": 133.0,
+    "verified_at": "2026-03-04T17:53:42.407756+00:00"
+  },
+  {
+    "seller": "ebay",
+    "model": "PIXEL_6A",
+    "storage": "GB_128",
+    "condition": "GOOD",
+    "urls_checked": [
+      "https://www.ebay.com/sch/i.html?_fsrp=1&_nkw=Google+Pixel+6a&Capacity=128&Lock%2520Status=Factory%2520Unlocked&LH_ItemCondition=2020|2030&Model=Google%2520Pixel%25206a&LH_BIN=1&_sop=15"
+    ],
+    "computed_price": 79.99,
+    "verified_at": "2026-03-04T17:55:04.033709+00:00"
+  },
+  {
+    "seller": "amazon",
+    "model": "PIXEL_6A",
+    "storage": "GB_128",
+    "condition": "GOOD",
+    "urls_checked": [
+      "https://www.amazon.com/s?k=Google+Pixel+6a+128GB+unlocked&page=1&rh=p_n_condition-type%3A16907722011%257C6503242011",
+      "https://www.amazon.com/s?k=Google+Pixel+6a+128GB+unlocked&page=2&rh=p_n_condition-type%3A16907722011%257C6503242011",
+      "https://www.amazon.com/s?k=Google+Pixel+6a+128GB+unlocked&page=3&rh=p_n_condition-type%3A16907722011%257C6503242011"
+    ],
+    "computed_price": 163.0,
+    "verified_at": "2026-03-04T17:55:20.866148+00:00"
+  }
+]

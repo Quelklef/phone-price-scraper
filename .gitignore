@@ -1,0 +1,7 @@
+*cache*
+node_modules/
+__init__.py
+.tmp*
+data.old
+data/cookies/
+results.csv
