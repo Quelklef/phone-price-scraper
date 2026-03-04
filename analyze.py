@@ -3,7 +3,6 @@ from itertools import product
 
 import deps
 from core import Condition, Model, Storage
-from core import KnownPriceMismatchError
 import glyphs
 from known_prices import KNOWN_PRICES
 import pretty_log
@@ -118,30 +117,59 @@ def _prices_match(expected_price, actual_price):
     return round(actual_price, 2) == round(expected_price, 2)
 
 
-def validate_known_price_row(seller, model, storage, condition, lowest_price, query_urls):
-    def mismatch(msg):
-        raise KnownPriceMismatchError(
-            f"Known price mismatch for {seller}/{model}/{storage}gb/{condition.value}: {msg}"
-        )
+def _english_list(items):
+    values = [str(item) for item in items]
+    if not values:
+        return ""
+    if len(values) == 1:
+        return values[0]
+    if len(values) == 2:
+        return f"{values[0]} and {values[1]}"
+    return f"{', '.join(values[:-1])}, and {values[-1]}"
 
+
+def validate_known_price_row(seller, model, storage, condition, lowest_price, query_urls):
     key = (seller, model, storage, condition)
     expected = KNOWN_PRICES.get(key)
     if expected is None:
-        return False
+        return False, None
 
     expected_urls, expected_price = expected
     got_url_text = _query_url_text(query_urls)
     expected_url_text = _query_url_text(expected_urls)
-    if query_urls != expected_urls or not _prices_match(expected_price, lowest_price):
-        mismatch(
-            "Expected:\n"
-            f"  query_url(s): {expected_url_text}\n"
-            f"  computed_price: {_price_text(expected_price)}\n"
-            "Got:\n"
-            f"  query_url(s): {got_url_text}\n"
-            f"  computed_price: {_price_text(lowest_price)}"
+    urls_match = query_urls == expected_urls
+    prices_match = _prices_match(expected_price, lowest_price)
+    if not urls_match or not prices_match:
+        if not urls_match and not prices_match:
+            mismatch_kind = "URLs and price"
+        elif not urls_match:
+            mismatch_kind = "URLs"
+        else:
+            mismatch_kind = "price"
+
+        details = [
+            "KNOWN-PRICE MISMATCH",
+            f"  For: {seller} | {model} | {storage}gb | {condition.value}",
+            f"  Difference: {mismatch_kind}",
+        ]
+        if not urls_match:
+            details.extend(
+                [
+                    f"  Expected query URL(s): {expected_url_text}",
+                    f"  Got query URL(s):      {got_url_text}",
+                ]
+            )
+        if not prices_match:
+            details.extend(
+                [
+                    f"  Expected price: {_price_text(expected_price)}",
+                    f"  Got price:      {_price_text(lowest_price)}",
+                ]
+            )
+        return True, (
+            "\n".join(details)
         )
-    return True
+    return True, None
 
 
 def run(
@@ -166,6 +194,8 @@ def run(
         results = []
         known_price_xref_count = 0
         known_price_xref_by_seller = {seller.key: 0 for seller in active_sellers}
+        mismatch_count = 0
+        mismatch_sellers = set()
         pretty_log.banner()
         pretty_log.section("Scraping listings")
 
@@ -186,7 +216,7 @@ def run(
             with deps.timing.time_stage(f"seller.{seller_name}"):
                 query_urls, lowest_price, listing_url = get_price(model, condition, storage)
 
-            is_known_price_match = validate_known_price_row(
+            is_known_price_xref, mismatch_message = validate_known_price_row(
                 seller_name,
                 model,
                 storage,
@@ -194,6 +224,7 @@ def run(
                 lowest_price,
                 query_urls,
             )
+            is_known_price_match = is_known_price_xref and mismatch_message is None
 
             results.append({
                 "seller": seller_name,
@@ -216,7 +247,18 @@ def run(
             if is_known_price_match:
                 known_price_xref_count += 1
                 known_price_xref_by_seller[seller_name] += 1
+            if mismatch_message is not None:
+                mismatch_count += 1
+                mismatch_sellers.add(seller_name)
+                pretty_log.warning_loud(f"WARNING: {mismatch_message}")
         print_results_table(results, table_direction=table_direction)
+        if mismatch_count > 0:
+            seller_text = _english_list(sorted(mismatch_sellers))
+            deps.printer.print()
+            pretty_log.warning_loud(
+                f"WARNING: {mismatch_count} prices are incorrect; the scrapers for "
+                f"{seller_text} may be producing bad results."
+            )
         if output_csv_path:
             write_results_csv(results, output_csv_path)
             deps.printer.print(f"\nCSV written: {output_csv_path}")

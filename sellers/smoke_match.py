@@ -33,6 +33,32 @@ _VARIANT_TOKENS = frozenset(
 )
 _SEPARATOR_RE = re.compile(r"(?:-|/|\||,|&|\band\b)", flags=re.IGNORECASE)
 
+# High-level variant filtering model
+# ---------------------------------
+# We treat model matching as a "same-family, same-variant" problem:
+# 1) Extract a target family key + variant signature from the requested model.
+#    Example: "Pixel 9 Pro" -> family "9", signature ("pro",)
+#             "Pixel 9"     -> family "9", signature ()
+#             "Pixel 6A"    -> family "6", signature ("a",)
+# 2) Scan listing text for references to that same family key and extract the
+#    variant signature seen at each reference.
+# 3) Reject a listing if any same-family reference has a different signature.
+#
+# Why this works:
+# - It catches nearby variants in same model line (e.g. "9 Pro XL" when target
+#   is "9 Pro") without requiring a full, brittle model taxonomy.
+# - It is brand-agnostic and uses a small curated set of common suffix tokens.
+#
+# Why it is intentionally heuristic:
+# - Seller titles are noisy and often include fragmented text, abbreviations,
+#   and specs mixed into model names.
+# - We use this as a smoke check (guardrail), not as a canonical model parser.
+#
+# Important pitfall handled explicitly:
+# - Spec tokens like "6GB" or "5G" can look like "family + suffix".
+#   We ignore suffixes that are not in _VARIANT_TOKENS so specs are not
+#   misclassified as model variants.
+#
 
 def normalize_text(text):
     # Shared normalization: lowercase + remove all whitespace.
