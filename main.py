@@ -156,7 +156,7 @@ def build_parser():
             "Default: 128gb,256gb,512gb."
         ),
     )
-    output_group = parser.add_argument_group("output")
+    output_group = parser.add_argument_group("file output")
     output_group.add_argument(
         "-o",
         "--output-csv",
@@ -166,7 +166,7 @@ def build_parser():
         metavar="PATH",
         help="Also write the final table to CSV at PATH (default: results.csv).",
     )
-    display_group = parser.add_argument_group("display")
+    display_group = parser.add_argument_group("terminal output")
     display_group.add_argument(
         "-u",
         "-U",
@@ -196,7 +196,7 @@ def build_parser():
         action="store_true",
         help="Show timing/profiling details at the end.",
     )
-    output_group.add_argument(
+    display_group.add_argument(
         "--table-direction",
         choices=("top-to-bottom", "bottom-to-top"),
         default="bottom-to-top",
