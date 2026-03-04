@@ -129,10 +129,7 @@ def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
         description="Check phone listing prices from multiple sellers.",
-        epilog=(
-            "Known-good prices are manual spot-checks stored in data/known-prices.json. "
-            "If a current result does not match one of those entries, the run stops so you can investigate."
-        ),
+        epilog=None,
         formatter_class=argparse.RawTextHelpFormatter,
     )
     help_group = parser.add_argument_group("help")
@@ -148,7 +145,7 @@ def build_parser():
         default=None,
         metavar="LIST",
         help=(
-            "Comma-separated sellers to search (e.g. \"swappa,ebay\"). "
+            "Comma-separated sellers to search (e.g. \"swappa,ebay\").\n"
             "Supported sellers: swappa,ebay,amazon,backmarket."
         ),
     )
@@ -175,7 +172,7 @@ def build_parser():
         default=None,
         metavar="LIST",
         help=(
-            "Comma-separated condition list. "
+            "Comma-separated condition list.\n"
             "Supported conditions: good,best. Default: good,best."
         ),
     )
