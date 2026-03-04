@@ -12,23 +12,23 @@ from core import Model, Storage
 # mainstream phone suffixes and gives us a brand-agnostic baseline.
 _VARIANT_TOKENS = frozenset(
     {
-        "a",
-        "plus",
-        "pro",
-        "max",
-        "ultra",
-        "mini",
-        "lite",
-        "fe",
-        "fold",
-        "flip",
-        "xl",
-        "se",
-        "t",
-        "r",
-        "edge",
-        "core",
-        "neo",
+        "a",      # Google Pixel A-series (e.g. 8a).
+        "plus",   # Common larger-tier suffix (e.g. iPhone Plus, Galaxy Plus).
+        "pro",    # Common premium-tier suffix across brands.
+        "max",    # Max-tier suffix (often larger/better spec variant).
+        "ultra",  # Top-tier suffix (common on Samsung/Xiaomi).
+        "mini",   # Compact variant suffix.
+        "lite",   # Lower-tier/lighter feature variant.
+        "fe",     # Samsung "Fan Edition".
+        "fold",   # Foldable-book style variant (Fold/Pro Fold).
+        "flip",   # Clamshell foldable variant.
+        "xl",     # Extra-large variant suffix.
+        "se",     # Apple "Special Edition" style suffix.
+        "t",      # OnePlus T refresh variant.
+        "r",      # OnePlus R performance/value branch.
+        "edge",   # Motorola/Samsung-style edge branded variant.
+        "core",   # Core/entry-tier variant suffix.
+        "neo",    # Neo refresh/sub-variant suffix.
     }
 )
 _SEPARATOR_RE = re.compile(r"(?:-|/|\||,|&|\band\b)", flags=re.IGNORECASE)
