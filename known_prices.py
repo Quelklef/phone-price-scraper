@@ -12,17 +12,10 @@ KnownPriceKey = tuple[str, Model, Storage, Condition]
 KnownPriceValue = tuple[frozenset[str], float | None]
 
 
-def _legacy_model_name_to_display_name(name):
-    if not isinstance(name, str):
-        raise ValueError(f"Invalid model name in known-prices.json: {name!r}")
-    if name.startswith("PIXEL_"):
-        suffix = name.removeprefix("PIXEL_").lower().replace("_", " ")
-        return f"Pixel {suffix}"
-    return name
-
-
 def _normalize_model(raw_model):
-    model = normalize_model_name(_legacy_model_name_to_display_name(raw_model))
+    if not isinstance(raw_model, str):
+        raise ValueError(f"Invalid model name in known-prices.json: {raw_model!r}")
+    model = normalize_model_name(raw_model)
     if not model:
         raise ValueError(f"Invalid empty model in known-prices.json: {raw_model!r}")
     return model
