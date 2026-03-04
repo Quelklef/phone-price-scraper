@@ -37,12 +37,9 @@ can investigate the seller parser drift.
 """.strip()
 
 CONDITION_FILTER_NOTE = (
-    "No --search-conditions flag is provided on purpose. "
-    "Condition handling is seller-specific and not a simple global text filter: "
-    "Swappa maps best->(new,mint) and good->(good); "
-    "eBay maps to specific condition buckets/facet IDs; "
-    "Amazon maps to facet expression IDs (best=new, good=renewed|used); "
-    "BackMarket maps to quality labels and then resolves condition-context variant pages."
+    "Note: There is no --search-conditions flag. "
+    "Each seller uses different condition controls, so one shared condition filter would be misleading. "
+    "The scraper already applies condition mapping per seller for you."
 )
 
 
@@ -118,7 +115,10 @@ def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
         description="Check phone listing prices from multiple sellers.",
-        epilog="Known-price mismatches are treated as failures to keep seller parsers honest over time.",
+        epilog=(
+            "Known-good prices are manual spot-checks stored in data/known-prices.json. "
+            "If a current result does not match a known-good entry, the run stops so you can investigate."
+        ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
     help_group = parser.add_argument_group("help")
