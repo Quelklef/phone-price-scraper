@@ -95,6 +95,8 @@ def _load_known_prices():
         if key in prices:
             raise ValueError(f"Duplicate known price key: {key}")
         urls = _normalize_checked_urls(row.get("urls_checked"), key)
+        # Keep `verified_at` validation even though runtime logic does not
+        # currently consume it; this prevents malformed metadata drift.
         _normalize_verified_at(row.get("verified_at"), key)
         prices[key] = (urls, _normalize_computed_price(row.get("computed_price"), key))
     return prices

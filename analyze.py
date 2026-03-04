@@ -8,41 +8,60 @@ from known_prices import KNOWN_PRICES
 import pretty_log
 from sellers.registry import SELLERS
 
+TABLE_HEADERS = ["Seller", "Model", "Condition", "Storage", "Price", "Listing URL"]
+
 
 def _iter_supported_model_storage_pairs(
     *,
     search_models: list[Model],
     search_storages: list[Storage],
 ):
-    if search_models is None:
-        raise ValueError("search_models must be provided.")
-    if search_storages is None:
-        raise ValueError("search_storages must be provided.")
-    for model in search_models:
-        for storage in search_storages:
-            yield model, storage
+    yield from product(search_models, search_storages)
+
+
+def _sort_results_by_price(results):
+    # Keep "no listing" rows at the end while sorting numeric prices ascending.
+    return sorted(
+        results,
+        key=lambda row: (
+            row["lowest_price"] is None,
+            row["lowest_price"] if row["lowest_price"] is not None else 0.0,
+        ),
+    )
+
+
+def _price_cell(price):
+    return "N/A" if price is None else f"${price:.2f}"
+
+
+def _result_to_row(row):
+    return [
+        row["seller"],
+        row["model"],
+        row["condition"],
+        row["storage"],
+        _price_cell(row["lowest_price"]),
+        row["listing_url"] or "N/A",
+    ]
 
 
 def print_results_table(results, *, table_direction):
-    headers = [
-        "Seller", "Model", "Condition", "Storage", "Price", "Listing URL",
-    ]
-    _sorted_results, rows = _results_table_rows(results)
+    rows = [_result_to_row(row) for row in _sort_results_by_price(results)]
     if table_direction == "bottom-to-top":
         rows = list(reversed(rows))
 
-    widths = [max(len(header), *(len(row[i]) for row in rows)) for i, header in enumerate(headers)]
+    widths = [max(len(header), *(len(row[i]) for row in rows)) for i, header in enumerate(TABLE_HEADERS)]
 
     def fmt(row):
         styled_cells = [
-            pretty_log.style_cell(headers[i], cell.ljust(widths[i])) for i, cell in enumerate(row)
+            pretty_log.style_cell(TABLE_HEADERS[i], cell.ljust(widths[i])) for i, cell in enumerate(row)
         ]
         return f" {glyphs.V} ".join(styled_cells)
 
     pretty_log.table_header()
     line = f"{glyphs.H_HEAVY}{glyphs.X_HEAVY}{glyphs.H_HEAVY}".join(glyphs.H_HEAVY * w for w in widths)
     if table_direction == "top-to-bottom":
-        deps.printer.print(fmt(headers))
+        deps.printer.print(fmt(TABLE_HEADERS))
         deps.printer.print(line)
         for row in rows:
             deps.printer.print(fmt(row))
@@ -51,55 +70,14 @@ def print_results_table(results, *, table_direction):
     for row in rows:
         deps.printer.print(fmt(row))
     deps.printer.print(line)
-    deps.printer.print(fmt(headers))
-
-
-def _results_table_rows(results):
-    sorted_results = sorted(
-        results,
-        key=lambda row: (
-            row["lowest_price"] is None,
-            row["lowest_price"] if row["lowest_price"] is not None else 0.0,
-        ),
-    )
-    rows = [[
-            row["seller"],
-            row["model"],
-            row["condition"],
-            row["storage"],
-            "N/A" if row["lowest_price"] is None else f"${row['lowest_price']:.2f}",
-            row["listing_url"] or "N/A",
-        ] for row in sorted_results]
-    return sorted_results, rows
+    deps.printer.print(fmt(TABLE_HEADERS))
 
 
 def write_results_csv(results, output_path):
-    headers = [
-        "Seller",
-        "Model",
-        "Condition",
-        "Storage",
-        "Price",
-        "Listing URL",
-    ]
-    sorted_results = sorted(
-        results,
-        key=lambda row: (
-            row["lowest_price"] is None,
-            row["lowest_price"] if row["lowest_price"] is not None else 0.0,
-        ),
-    )
-    rows = [[
-            row["seller"],
-            row["model"],
-            row["condition"],
-            row["storage"],
-            "N/A" if row["lowest_price"] is None else f"${row['lowest_price']:.2f}",
-            row["listing_url"] or "N/A",
-        ] for row in sorted_results]
+    rows = [_result_to_row(row) for row in _sort_results_by_price(results)]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(headers)
+        writer.writerow(TABLE_HEADERS)
         writer.writerows(rows)
 
 
@@ -256,7 +234,7 @@ def run(
             seller_text = _english_list(sorted(mismatch_sellers))
             deps.printer.print()
             pretty_log.warning_loud(
-                f"WARNING: {mismatch_count} prices are incorrect; the scrapers for "
+                f"WARNING: {mismatch_count} prices differ from verified. The scrapers for "
                 f"{seller_text} may be producing bad results."
             )
         if output_csv_path:

@@ -60,6 +60,26 @@ def _parse_csv(raw_value, field_name):
     return raw_items
 
 
+def _parse_choice_csv(raw_value, *, field_name, allowed_values):
+    selected = []
+    invalid = []
+    allowed = tuple(allowed_values)
+    allowed_set = set(allowed)
+    for item in _parse_csv(raw_value, field_name):
+        token = item.strip().lower()
+        if token not in allowed_set:
+            invalid.append(item)
+            continue
+        if token not in selected:
+            selected.append(token)
+    if invalid:
+        allowed_text = ",".join(allowed)
+        raise argparse.ArgumentTypeError(
+            f"Unknown {field_name} values: {', '.join(invalid)}. Valid {field_name}s: {allowed_text}"
+        )
+    return selected
+
+
 def _parse_models_csv(raw_value):
     selected: list[Model] = []
     for model in _parse_csv(raw_value, "model"):
@@ -90,39 +110,19 @@ def _parse_storages_csv(raw_value):
 
 
 def _parse_sellers_csv(raw_value):
-    selected = []
-    invalid = []
-    for item in _parse_csv(raw_value, "seller"):
-        key = item.strip().lower()
-        if key not in SUPPORTED_SELLER_KEYS:
-            invalid.append(item)
-            continue
-        if key not in selected:
-            selected.append(key)
-    if invalid:
-        valid = ", ".join(SUPPORTED_SELLER_KEYS)
-        raise argparse.ArgumentTypeError(
-            f"Unknown seller values: {', '.join(invalid)}. Valid sellers: {valid}"
-        )
-    return selected
+    return _parse_choice_csv(
+        raw_value,
+        field_name="seller",
+        allowed_values=SUPPORTED_SELLER_KEYS,
+    )
 
 
 def _parse_conditions_csv(raw_value):
-    selected = []
-    invalid = []
-    allowed = ("good", "best")
-    for item in _parse_csv(raw_value, "condition"):
-        token = item.strip().lower()
-        if token not in allowed:
-            invalid.append(item)
-            continue
-        if token not in selected:
-            selected.append(token)
-    if invalid:
-        raise argparse.ArgumentTypeError(
-            f"Unknown condition values: {', '.join(invalid)}. Valid conditions: good,best"
-        )
-    return selected
+    return _parse_choice_csv(
+        raw_value,
+        field_name="condition",
+        allowed_values=("good", "best"),
+    )
 
 
 def build_parser():

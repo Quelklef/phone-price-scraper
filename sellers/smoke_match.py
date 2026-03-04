@@ -31,6 +31,7 @@ _VARIANT_TOKENS = frozenset(
         "neo",    # Neo refresh/sub-variant suffix.
     }
 )
+_ORDERED_VARIANT_TOKENS = tuple(sorted(_VARIANT_TOKENS, key=len, reverse=True))
 _SEPARATOR_RE = re.compile(r"(?:-|/|\||,|&|\band\b)", flags=re.IGNORECASE)
 # Detect storage mentions like "128GB", "256 gb", or "64g".
 # We intentionally require at least 2 digits so "5g" network text is not
@@ -113,11 +114,11 @@ def _split_combined_variant_token(token):
     """Split compact variant words like 'promax' or 'proxl' into components."""
     out = []
     remaining = token
-    # Keep the token set stable in matching order so split is deterministic.
-    ordered = sorted(_VARIANT_TOKENS, key=len, reverse=True)
     while remaining:
         matched = None
-        for candidate in ordered:
+        # Longest-first matching preserves deterministic splits like
+        # "promax" -> ["pro", "max"].
+        for candidate in _ORDERED_VARIANT_TOKENS:
             if remaining.startswith(candidate):
                 matched = candidate
                 break
