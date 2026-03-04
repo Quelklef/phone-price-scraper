@@ -116,6 +116,7 @@ def _parse_sellers_csv(raw_value):
 
 def build_parser():
     parser = argparse.ArgumentParser(
+        add_help=False,
         description="Check phone listing prices from multiple sellers.",
         epilog=(
             "Known-price mismatches are treated as failures to keep seller parsers honest over time.\n\n"
@@ -123,53 +124,12 @@ def build_parser():
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument(
-        "-u",
-        "-U",
-        "--unicode",
-        "--no-unicode",
-        dest="unicode",
-        nargs=0,
-        action=_UnicodeAction,
-        default=True,
-        help="Unicode output toggle (-u/--unicode default, -U/--no-unicode).",
-    )
-    parser.add_argument(
-        "-c",
-        "-C",
-        "--colors",
-        "--no-colors",
-        dest="colors",
-        nargs=0,
-        action=_ColorsAction,
-        default=True,
-        help="Color output toggle (-c/--colors default, -C/--no-colors).",
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-performance",
-        action="store_true",
-        help="Show timing/profiling details at the end.",
-    )
-    output_group = parser.add_argument_group("output")
-    output_group.add_argument(
-        "-o",
-        "--output-csv",
-        nargs="?",
-        const="results.csv",
-        default=None,
-        metavar="PATH",
-        help="Also write the final table to CSV at PATH (default: results.csv).",
-    )
-    output_group.add_argument(
-        "--table-direction",
-        choices=("top-to-bottom", "bottom-to-top"),
-        default="bottom-to-top",
-        help=(
-            "Table print direction for terminal readability. "
-            "'bottom-to-top' (default) prints rows in reverse and places the header at the end "
-            "so recent/lowest rows stay nearest your prompt."
-        ),
+    help_group = parser.add_argument_group("help")
+    help_group.add_argument(
+        "-h",
+        "--help",
+        action="help",
+        help="Show this help message and exit.",
     )
     search_group = parser.add_argument_group("search scope")
     search_group.add_argument(
@@ -194,6 +154,56 @@ def build_parser():
         help=(
             "Comma-separated storage list to search (e.g. \"128gb,256gb\"). "
             "Default: 128gb,256gb,512gb."
+        ),
+    )
+    output_group = parser.add_argument_group("output")
+    output_group.add_argument(
+        "-o",
+        "--output-csv",
+        nargs="?",
+        const="results.csv",
+        default=None,
+        metavar="PATH",
+        help="Also write the final table to CSV at PATH (default: results.csv).",
+    )
+    display_group = parser.add_argument_group("display")
+    display_group.add_argument(
+        "-u",
+        "-U",
+        "--unicode",
+        "--no-unicode",
+        dest="unicode",
+        nargs=0,
+        action=_UnicodeAction,
+        default=True,
+        help="Unicode output toggle (-u/--unicode default, -U/--no-unicode).",
+    )
+    display_group.add_argument(
+        "-c",
+        "-C",
+        "--colors",
+        "--no-colors",
+        dest="colors",
+        nargs=0,
+        action=_ColorsAction,
+        default=True,
+        help="Color output toggle (-c/--colors default, -C/--no-colors).",
+    )
+    other_group = parser.add_argument_group("other options")
+    other_group.add_argument(
+        "-p",
+        "--profile-performance",
+        action="store_true",
+        help="Show timing/profiling details at the end.",
+    )
+    output_group.add_argument(
+        "--table-direction",
+        choices=("top-to-bottom", "bottom-to-top"),
+        default="bottom-to-top",
+        help=(
+            "Table print direction for terminal readability. "
+            "'bottom-to-top' (default) prints rows in reverse and places the header at the end "
+            "so recent/lowest rows stay nearest your prompt."
         ),
     )
     parser.description = ANALYZE_LONG_HELP
