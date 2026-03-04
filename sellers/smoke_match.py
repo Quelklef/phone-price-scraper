@@ -12,7 +12,7 @@ These checks are intentionally heuristic. They should bias toward safety
 
 import re
 
-from core import KNOWN_MODELS
+from core import KNOWN_MODELS, Model, Storage
 
 
 def normalize_text(text):
@@ -21,17 +21,17 @@ def normalize_text(text):
     return "".join((text or "").lower().split())
 
 
-def _model_norm(model: str):
+def _model_norm(model: Model):
     """Canonical lowercased model name with collapsed whitespace."""
     return " ".join(model.lower().split())
 
 
-def _model_tail(model: str):
+def _model_tail(model: Model):
     """Model name without leading 'pixel ' prefix (e.g. '8 pro')."""
     return _model_norm(model).removeprefix("pixel ").strip()
 
 
-def storage_terms(storage: int):
+def storage_terms(storage: Storage):
     # Accept both "gb" and "g" forms (e.g. "128gb" and "128g").
     digits = str(storage)
     return [f"{digits}gb", f"{digits}g"]
@@ -75,7 +75,7 @@ def _build_family_variants():
 _FAMILY_VARIANTS = _build_family_variants()
 
 
-def passes_model_smoke_checks(haystack_text, target_model: str):
+def passes_model_smoke_checks(haystack_text, target_model: Model):
     """Shared model-level smoke checks used by marketplace seller parsers.
 
     Current policy:
@@ -89,7 +89,7 @@ def passes_model_smoke_checks(haystack_text, target_model: str):
     return True
 
 
-def contains_other_model(haystack_text, target_model: str):
+def contains_other_model(haystack_text, target_model: Model):
     # Keep this coherent with normalize_text-based matching used by seller parsers.
     haystack = normalize_text(haystack_text)
     target_norm = normalize_text(_model_norm(target_model))
@@ -106,7 +106,7 @@ def contains_other_model(haystack_text, target_model: str):
     return False
 
 
-def contains_multi_variant_model_list(haystack_text, target_model: str):
+def contains_multi_variant_model_list(haystack_text, target_model: Model):
     """Detect "variant list" model titles like "Pixel 8 - 8 Pro".
 
     Why this exists:

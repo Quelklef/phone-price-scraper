@@ -1,6 +1,7 @@
 import argparse
 
 import deps
+from core import Model, Storage
 
 ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
@@ -42,7 +43,7 @@ def _parse_csv(raw_value, field_name):
 
 
 def _parse_models_csv(raw_value):
-    selected = []
+    selected: list[Model] = []
     for model in _parse_csv(raw_value, "model"):
         if model not in selected:
             selected.append(model)
@@ -50,7 +51,7 @@ def _parse_models_csv(raw_value):
 
 
 def _parse_storages_csv(raw_value):
-    selected = []
+    selected: list[Storage] = []
     invalid = []
     for item in _parse_csv(raw_value, "storage"):
         token = item.strip().lower()

@@ -3,7 +3,7 @@ from datetime import datetime
 from itertools import product
 
 import deps
-from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, MODEL_INFO
+from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, MODEL_INFO, Model, Storage
 from core import KnownPriceMismatchError
 import glyphs
 from known_prices import KNOWN_PRICES
@@ -11,7 +11,11 @@ import pretty_log
 from sellers.registry import SELLERS
 
 
-def _iter_supported_model_storage_pairs(*, search_models=None, search_storages=None):
+def _iter_supported_model_storage_pairs(
+    *,
+    search_models: list[Model] | None = None,
+    search_storages: list[Storage] | None = None,
+):
     models = KNOWN_MODELS if search_models is None else search_models
     for model in models:
         if search_storages is not None:
@@ -188,8 +192,8 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
 def run(
     profile_performance=False,
     output_csv_path=None,
-    search_models=None,
-    search_storages=None,
+    search_models: list[Model] | None = None,
+    search_storages: list[Storage] | None = None,
 ):
     with deps.timing.time_stage("program"):
         results = []

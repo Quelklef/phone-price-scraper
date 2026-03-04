@@ -8,7 +8,11 @@ class Condition(StrEnum):
     BEST = "best"
 
 
-KNOWN_MODELS = [
+Model = str
+Storage = int
+
+
+KNOWN_MODELS: list[Model] = [
     "Pixel 6a",
     "Pixel 6",
     "Pixel 6 Pro",
@@ -31,7 +35,7 @@ KNOWN_MODELS = [
     "Pixel 10 Pro Fold",
 ]
 
-KNOWN_STORAGES_GB = [128, 256, 512]
+KNOWN_STORAGES_GB: list[Storage] = [128, 256, 512]
 
 
 @dataclass(frozen=True)
@@ -42,13 +46,13 @@ class ModelInfo:
     depth_mm: float
     weight_g: float
     max_brightness_nits: float | None
-    supported_storages: frozenset[int]
+    supported_storages: frozenset[Storage]
     supports_wireless_charging: bool = False
     supports_pixelsnap_magnets: bool = False
 
 
 # Sourced from GSMArena model pages.
-MODEL_INFO: dict[str, ModelInfo] = {
+MODEL_INFO: dict[Model, ModelInfo] = {
     "Pixel 6a": ModelInfo(
         oem_min_support_end=datetime(2027, 7, 1),
         width_mm=71.8,

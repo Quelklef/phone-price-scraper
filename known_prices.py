@@ -1,14 +1,14 @@
 import json
 from pathlib import Path
 
-from core import Condition, KNOWN_MODELS
+from core import Condition, KNOWN_MODELS, Model, Storage
 
 # Partial expected best-deal checks across all sources.
 # IMPORTANT: Do not change known prices without explicit user confirmation.
 # Stored in JSON for easier editing and non-code diffs.
 _KNOWN_PRICES_PATH = Path(__file__).resolve().parent / "data" / "known-prices.json"
 KNOWN_PRICES_PATH = _KNOWN_PRICES_PATH
-KnownPriceKey = tuple[str, str, int, Condition]
+KnownPriceKey = tuple[str, Model, Storage, Condition]
 KnownPriceValue = tuple[frozenset[str], float | None]
 
 

@@ -21,7 +21,7 @@ import re
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import deps
-from core import Condition, LogicExtractionError
+from core import Condition, LogicExtractionError, Model, Storage
 from lxml import html as lxml_html
 import requests
 from sellers.spec import SellerSpec
@@ -30,17 +30,17 @@ _CONDITION_GROUP_LABEL = "Condition"
 _STORAGE_GROUP_LABEL = "Storage (GB)"
 
 
-def _model_slug(model: str):
+def _model_slug(model: Model):
     """Map model enum value to BackMarket product slug suffix."""
     return f"google-{str(model).lower().replace(' ', '-')}"
 
 
-def _storage_label(storage: int):
+def _storage_label(storage: Storage):
     """Format storage label as rendered in BackMarket picker UI."""
     return f"{storage} GB"
 
 
-def build_product_url(model: str):
+def build_product_url(model: Model):
     """Build BackMarket model root URL."""
     return f"https://www.backmarket.com/en-us/p/{_model_slug(model)}"
 
@@ -232,7 +232,7 @@ def _selected_condition_label(nuxt_arr):
     return None
 
 
-def _extract_listing_from_condition_context(condition_html, condition_label, storage: int):
+def _extract_listing_from_condition_context(condition_html, condition_label, storage: Storage):
     """Resolve one condition context into `(price, listing_url)` for storage.
 
     Returns `(None, None)` when:
@@ -269,7 +269,7 @@ def _extract_listing_from_condition_context(condition_html, condition_label, sto
         return price, _canonicalize_listing_url(storage_url)
 
 
-def get_lowest_price(model: str, condition: Condition, storage: int):
+def get_lowest_price(model: Model, condition: Condition, storage: Storage):
     """Public seller entrypoint for BackMarket."""
     root_url = build_product_url(model)
     try:
