@@ -1,9 +1,8 @@
 import csv
-from datetime import datetime
 from itertools import product
 
 import deps
-from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, MODEL_INFO, Model, Storage, normalize_model_name
+from core import Condition, KNOWN_MODELS, KNOWN_STORAGES_GB, Model, Storage
 from core import KnownPriceMismatchError
 import glyphs
 from known_prices import KNOWN_PRICES
@@ -23,40 +22,13 @@ def _iter_supported_model_storage_pairs(
                 yield model, storage
             continue
 
-        model_info = MODEL_INFO.get(model)
-        if model_info is not None:
-            for storage in sorted(model_info.supported_storages):
-                yield model, storage
-            continue
-
         for storage in KNOWN_STORAGES_GB:
             yield model, storage
 
 
-def compute_support_years_remaining(support_end_date, today):
-    delta = support_end_date - today
-    return max(0.0, delta.total_seconds() / (365.25 * 24 * 60 * 60))
-
-
-def compute_model_metrics(model_info, *, today, base_area, base_weight):
-    area = model_info.width_mm * model_info.height_mm
-    weight = model_info.weight_g
-    return (
-        compute_support_years_remaining(model_info.oem_min_support_end, today),
-        (area / base_area) * 100.0,
-        (weight / base_weight) * 100.0,
-    )
-
-
-def _default_model_metrics():
-    return None, None, None
-
-
 def print_results_table(results):
     headers = [
-        "Seller", "Model", "Area % 6a", "Weight % 6a", "Condition", "Storage",
-        "Wireless", "Pixelsnap", "Price",
-        "Years Left", "$/Year", "Listing URL",
+        "Seller", "Model", "Condition", "Storage", "Price", "Listing URL",
     ]
     sorted_results, rows = _results_table_rows(results)
 
@@ -69,7 +41,6 @@ def print_results_table(results):
         return f" {glyphs.V} ".join(styled_cells)
 
     pretty_log.table_header()
-    deps.printer.print("Legend: Pixelsnap=yes means Qi2 magnetic alignment/accessory support.")
     deps.printer.print(fmt(headers))
     deps.printer.print(f"{glyphs.H_HEAVY}{glyphs.X_HEAVY}{glyphs.H_HEAVY}".join(glyphs.H_HEAVY * w for w in widths))
     for row in rows:
@@ -80,26 +51,16 @@ def _results_table_rows(results):
     sorted_results = sorted(
         results,
         key=lambda row: (
-            row["dollars_per_year_support"] is not None,
-            -(row["dollars_per_year_support"] if row["dollars_per_year_support"] is not None else 0.0),
+            row["lowest_price"] is None,
+            row["lowest_price"] if row["lowest_price"] is not None else 0.0,
         ),
     )
     rows = [[
             row["seller"],
             row["model"],
-            "N/A" if row["model_area_pct_6a"] is None else f"{row['model_area_pct_6a']:.0f}%",
-            "N/A" if row["model_weight_pct_6a"] is None else f"{row['model_weight_pct_6a']:.0f}%",
             row["condition"],
             row["storage"],
-            "yes" if row["supports_wireless_charging"] else "no",
-            "yes" if row["supports_pixelsnap_magnets"] else "no",
             "N/A" if row["lowest_price"] is None else f"${row['lowest_price']:.2f}",
-            (
-                "N/A"
-                if row["support_years_remaining"] is None
-                else f"{row['support_years_remaining']:.2f}"
-            ),
-            "N/A" if row["dollars_per_year_support"] is None else f"${row['dollars_per_year_support']:.2f}",
             row["listing_url"] or "N/A",
         ] for row in sorted_results]
     return sorted_results, rows
@@ -107,45 +68,27 @@ def _results_table_rows(results):
 
 def write_results_csv(results, output_path):
     headers = [
-        "Model",
-        "Area (% of 6A)",
-        "Weight (% of 6A)",
-        "Wireless Charging",
-        "Pixelsnap / Qi2",
-        "OEM Support Years Remaining",
-        "",
         "Seller",
+        "Model",
         "Condition",
         "Storage",
-        "Listing URL",
         "Price",
-        "OEM Support Price per Year",
+        "Listing URL",
     ]
     sorted_results = sorted(
         results,
         key=lambda row: (
-            row["dollars_per_year_support"] is None,
-            (row["dollars_per_year_support"] if row["dollars_per_year_support"] is not None else 0.0),
+            row["lowest_price"] is None,
+            row["lowest_price"] if row["lowest_price"] is not None else 0.0,
         ),
     )
     rows = [[
-            row["model"],
-            "N/A" if row["model_area_pct_6a"] is None else f"{row['model_area_pct_6a']:.0f}%",
-            "N/A" if row["model_weight_pct_6a"] is None else f"{row['model_weight_pct_6a']:.0f}%",
-            "yes" if row["supports_wireless_charging"] else "no",
-            "yes" if row["supports_pixelsnap_magnets"] else "no",
-            (
-                "N/A"
-                if row["support_years_remaining"] is None
-                else f"{row['support_years_remaining']:.2f}"
-            ),
-            "",
             row["seller"],
+            row["model"],
             row["condition"],
             row["storage"],
-            row["listing_url"] or "N/A",
             "N/A" if row["lowest_price"] is None else f"${row['lowest_price']:.2f}",
-            "N/A" if row["dollars_per_year_support"] is None else f"${row['dollars_per_year_support']:.2f}",
+            row["listing_url"] or "N/A",
         ] for row in sorted_results]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -204,20 +147,6 @@ def run(
         results = []
         known_price_xref_count = 0
         known_price_xref_by_seller = {seller.key: 0 for seller in active_sellers}
-        today = datetime.now()
-        base_info = MODEL_INFO[normalize_model_name("Pixel 6a")]
-        base_area = base_info.width_mm * base_info.height_mm
-        base_weight = base_info.weight_g
-        # Model geometry/support metrics are invariant across seller/condition/storage.
-        model_metrics = {
-            model: compute_model_metrics(
-                info,
-                today=today,
-                base_area=base_area,
-                base_weight=base_weight,
-            )
-            for model, info in MODEL_INFO.items()
-        }
         pretty_log.banner()
         pretty_log.section("Scraping listings")
 
@@ -231,26 +160,12 @@ def run(
         ):
             seller_name = seller.key
             get_price = seller.get_lowest_price
-            model_info = MODEL_INFO.get(model)
             model_name = model
             condition_name = condition.value
             storage_name = f"{storage}gb"
-            support_years_remaining, model_area_pct_6a, model_weight_pct_6a = model_metrics.get(
-                model,
-                _default_model_metrics(),
-            )
 
             with deps.timing.time_stage(f"seller.{seller_name}"):
                 query_urls, lowest_price, listing_url = get_price(model, condition, storage)
-            dollars_per_year_support = (
-                lowest_price / support_years_remaining
-                if (
-                    lowest_price is not None
-                    and support_years_remaining is not None
-                    and support_years_remaining > 0
-                )
-                else None
-            )
 
             is_known_price_match = validate_known_price_row(
                 seller_name,
@@ -266,18 +181,8 @@ def run(
                 "model": model_name,
                 "condition": condition_name,
                 "storage": storage_name,
-                "supports_wireless_charging": (
-                    model_info.supports_wireless_charging if model_info is not None else False
-                ),
-                "supports_pixelsnap_magnets": (
-                    model_info.supports_pixelsnap_magnets if model_info is not None else False
-                ),
-                "model_area_pct_6a": model_area_pct_6a,
-                "model_weight_pct_6a": model_weight_pct_6a,
                 "lowest_price": lowest_price,
                 "listing_url": listing_url,
-                "support_years_remaining": support_years_remaining,
-                "dollars_per_year_support": dollars_per_year_support,
             })
 
             pretty_log.result(
@@ -286,7 +191,6 @@ def run(
                 condition_name,
                 storage_name,
                 lowest_price,
-                dollars_per_year_support,
                 listing_url,
                 known_price_match=is_known_price_match,
             )

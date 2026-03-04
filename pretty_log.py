@@ -86,7 +86,7 @@ def fetch(seller, url):
     )
 
 
-def result(seller, model, condition, storage, price, dollars_per_year, listing_url=None, known_price_match=False):
+def result(seller, model, condition, storage, price, listing_url=None, known_price_match=False):
     prefix = _result_prefix(seller, model, condition, storage)
     known_segment = _verified_column(known_price_match)
     if price is None:
@@ -97,12 +97,9 @@ def result(seller, model, condition, storage, price, dollars_per_year, listing_u
         return
 
     price_text = f"${price:.2f}"
-    dpy_text = "N/A" if dollars_per_year is None else f"${dollars_per_year:.2f}"
     line = (
         f"{_paint(_result_status(True), BOLD, GREEN)} {prefix} {known_segment} -- "
         + _paint(price_text, BOLD, GREEN)
-        + " "
-        + _paint(f"({dpy_text}/yr)", BOLD, MAGENTA)
         + " "
         + _paint(listing_url or "N/A", DIM, CYAN)
     )
