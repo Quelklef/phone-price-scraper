@@ -24,11 +24,13 @@ def _iter_supported_model_storage_pairs(
             yield model, storage
 
 
-def print_results_table(results):
+def print_results_table(results, *, table_direction):
     headers = [
         "Seller", "Model", "Condition", "Storage", "Price", "Listing URL",
     ]
-    sorted_results, rows = _results_table_rows(results)
+    _sorted_results, rows = _results_table_rows(results)
+    if table_direction == "bottom-to-top":
+        rows = list(reversed(rows))
 
     widths = [max(len(header), *(len(row[i]) for row in rows)) for i, header in enumerate(headers)]
 
@@ -39,10 +41,18 @@ def print_results_table(results):
         return f" {glyphs.V} ".join(styled_cells)
 
     pretty_log.table_header()
-    deps.printer.print(fmt(headers))
-    deps.printer.print(f"{glyphs.H_HEAVY}{glyphs.X_HEAVY}{glyphs.H_HEAVY}".join(glyphs.H_HEAVY * w for w in widths))
+    line = f"{glyphs.H_HEAVY}{glyphs.X_HEAVY}{glyphs.H_HEAVY}".join(glyphs.H_HEAVY * w for w in widths)
+    if table_direction == "top-to-bottom":
+        deps.printer.print(fmt(headers))
+        deps.printer.print(line)
+        for row in rows:
+            deps.printer.print(fmt(row))
+        return
+
     for row in rows:
         deps.printer.print(fmt(row))
+    deps.printer.print(line)
+    deps.printer.print(fmt(headers))
 
 
 def _results_table_rows(results):
@@ -133,6 +143,7 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
 def run(
     profile_performance=False,
     output_csv_path=None,
+    table_direction="bottom-to-top",
     search_sellers: list[str] | None = None,
     search_models: list[Model] | None = None,
     search_storages: list[Storage] | None = None,
@@ -196,7 +207,7 @@ def run(
             if is_known_price_match:
                 known_price_xref_count += 1
                 known_price_xref_by_seller[seller_name] += 1
-        print_results_table(results)
+        print_results_table(results, table_direction=table_direction)
         if output_csv_path:
             write_results_csv(results, output_csv_path)
             deps.printer.print(f"\nCSV written: {output_csv_path}")

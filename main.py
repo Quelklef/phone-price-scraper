@@ -161,6 +161,16 @@ def build_parser():
         metavar="PATH",
         help="Also write the final table to CSV at PATH (default: results.csv).",
     )
+    output_group.add_argument(
+        "--table-direction",
+        choices=("top-to-bottom", "bottom-to-top"),
+        default="bottom-to-top",
+        help=(
+            "Table print direction for terminal readability. "
+            "'bottom-to-top' (default) prints rows in reverse and places the header at the end "
+            "so recent/lowest rows stay nearest your prompt."
+        ),
+    )
     search_group = parser.add_argument_group("search scope")
     search_group.add_argument(
         "--search-sellers",
@@ -224,6 +234,7 @@ def main():
     return run(
         profile_performance=args.profile_performance,
         output_csv_path=args.output_csv,
+        table_direction=args.table_direction,
         search_sellers=args.search_sellers,
         search_models=args.search_models,
         search_storages=args.search_storages,
