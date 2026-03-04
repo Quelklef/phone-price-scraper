@@ -1,4 +1,3 @@
-from core import KNOWN_MODELS
 import deps
 import glyphs
 
@@ -15,7 +14,7 @@ MAGENTA = "\033[35m"
 CYAN = "\033[36m"
 WHITE = "\033[37m"
 SELLER_W = 10
-MODEL_W = max(len(model) for model in KNOWN_MODELS)
+MODEL_W = 25
 _VERIFIED_MARKER = "(v)"
 _UNVERIFIED_MARKER = " " * len(_VERIFIED_MARKER)
 _KV_LABEL_W = 11
@@ -57,6 +56,13 @@ def _result_prefix(seller, model, condition, storage):
 
 def _verified_column(known_price_match):
     return _paint(_VERIFIED_MARKER, BOLD, GREEN) if known_price_match else _UNVERIFIED_MARKER
+
+
+def set_model_width_from_models(models):
+    global MODEL_W
+    if not models:
+        return
+    MODEL_W = max(MODEL_W, max(len(model) for model in models))
 
 
 def banner():

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from core import Condition, KNOWN_MODELS, Model, Storage, normalize_model_name
+from core import Condition, Model, Storage, normalize_model_name
 
 # Partial expected best-deal checks across all sources.
 # IMPORTANT: Do not change known prices without explicit user confirmation.
@@ -17,18 +17,7 @@ def _legacy_model_name_to_display_name(name):
         raise ValueError(f"Invalid model name in known-prices.json: {name!r}")
     if name.startswith("PIXEL_"):
         suffix = name.removeprefix("PIXEL_").lower().replace("_", " ")
-        candidate = f"Pixel {suffix}"
-        normalized_candidate = "".join(candidate.lower().split())
-        normalized_candidate_nobrand = normalized_candidate.removeprefix("google")
-        for known_model in KNOWN_MODELS:
-            normalized_known = "".join(known_model.lower().split())
-            normalized_known_nobrand = normalized_known.removeprefix("google")
-            if (
-                normalized_known == normalized_candidate
-                or normalized_known_nobrand == normalized_candidate_nobrand
-            ):
-                return known_model
-        return candidate
+        return f"Pixel {suffix}"
     return name
 
 

@@ -138,6 +138,7 @@ def run(
     search_storages: list[Storage] | None = None,
 ):
     with deps.timing.time_stage("program"):
+        pretty_log.set_model_width_from_models(search_models or [])
         active_sellers = [
             seller for seller in SELLERS
             if search_sellers is None or seller.key in search_sellers
@@ -210,7 +211,7 @@ def run(
 
 
 if __name__ == "__main__":
-    from core import KNOWN_MODELS
+    from main import DEFAULT_SEARCH_MODELS
 
     deps.init_deps(profile_performance=False, unicode=True, colors=True)
-    run(profile_performance=False, search_models=list(KNOWN_MODELS), search_storages=[128, 256, 512])
+    run(profile_performance=False, search_models=list(DEFAULT_SEARCH_MODELS), search_storages=[128, 256, 512])

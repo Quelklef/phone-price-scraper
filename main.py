@@ -1,10 +1,32 @@
 import argparse
 
 import deps
-from core import KNOWN_MODELS, Model, Storage, normalize_model_name
+from core import Model, Storage, normalize_model_name
 
 SUPPORTED_SELLER_KEYS = ("swappa", "ebay", "amazon", "backmarket")
 DEFAULT_SEARCH_STORAGES: list[Storage] = [128, 256, 512]
+DEFAULT_SEARCH_MODELS: list[Model] = [
+    normalize_model_name("Pixel 6a"),
+    normalize_model_name("Pixel 6"),
+    normalize_model_name("Pixel 6 Pro"),
+    normalize_model_name("Pixel 7a"),
+    normalize_model_name("Pixel 7"),
+    normalize_model_name("Pixel 7 Pro"),
+    normalize_model_name("Pixel Tablet"),
+    normalize_model_name("Pixel Fold"),
+    normalize_model_name("Pixel 8a"),
+    normalize_model_name("Pixel 8"),
+    normalize_model_name("Pixel 8 Pro"),
+    normalize_model_name("Pixel 9a"),
+    normalize_model_name("Pixel 9"),
+    normalize_model_name("Pixel 9 Pro"),
+    normalize_model_name("Pixel 9 Pro XL"),
+    normalize_model_name("Pixel 9 Pro Fold"),
+    normalize_model_name("Pixel 10"),
+    normalize_model_name("Pixel 10 Pro"),
+    normalize_model_name("Pixel 10 Pro XL"),
+    normalize_model_name("Pixel 10 Pro Fold"),
+]
 
 ANALYZE_LONG_HELP = """
 Run all sellers and print a ranked comparison table.
@@ -175,7 +197,7 @@ def parse_args():
     args.search_models = (
         _parse_models_csv(args.search_models)
         if args.search_models is not None
-        else list(KNOWN_MODELS)
+        else list(DEFAULT_SEARCH_MODELS)
     )
     args.search_storages = (
         _parse_storages_csv(args.search_storages)
