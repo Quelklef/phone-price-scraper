@@ -11,10 +11,14 @@ import pretty_log
 from sellers.registry import SELLERS
 
 
-def _iter_supported_model_storage_pairs():
+def _iter_supported_model_storage_pairs(*, search_models=None, search_storages=None):
     for model in Model:
+        if search_models is not None and model not in search_models:
+            continue
         supported_storages = MODEL_INFO[model].supported_storages
         for storage in Storage:
+            if search_storages is not None and storage not in search_storages:
+                continue
             if storage in supported_storages:
                 yield model, storage
 
@@ -163,7 +167,12 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
     return True
 
 
-def run(profile_performance=False, output_csv_path=None):
+def run(
+    profile_performance=False,
+    output_csv_path=None,
+    search_models=None,
+    search_storages=None,
+):
     with deps.timing.time_stage("program"):
         results = []
         known_price_xref_count = 0
@@ -186,7 +195,10 @@ def run(profile_performance=False, output_csv_path=None):
         pretty_log.section("Scraping listings")
 
         for (model, storage), condition, seller in product(
-            _iter_supported_model_storage_pairs(),
+            _iter_supported_model_storage_pairs(
+                search_models=search_models,
+                search_storages=search_storages,
+            ),
             Condition,
             SELLERS,
         ):
