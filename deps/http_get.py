@@ -2,7 +2,6 @@ import json
 import re
 import threading
 import uuid
-from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -72,20 +71,71 @@ _DEFAULT_CONFIG = {
 }
 
 
-class DeferredCacheSession:
-    def __init__(self, cache):
-        self._cache = cache
+class WriteDeferredCacheSession:
+    """A cache facade that defers writes in-memory until explicit commit.
+
+    Reads and writes are intentionally decoupled from the source cache:
+    - Reads first check this session's in-memory writes.
+    - If missing, reads check the source cache's on-disk cache/index state.
+    - Cache misses are fetched over HTTP and stored only in-memory here.
+
+    This means new writes done by the source cache remain visible here, while
+    this session's writes remain isolated until commit_to(...) is called.
+    """
+
+    def __init__(self, source_cache):
+        self._source_cache = source_cache
         self._responses = {}
         self._committed = False
 
-    def record_response(self, url, text, status_code=None):
+    def _record_response(self, url, text, status_code=None):
         self._responses[url] = {"text": text, "status_code": status_code}
 
-    def commit(self):
+    def _get_local_response(self, url):
+        payload = self._responses.get(url)
+        if payload is None:
+            return None
+        status_code = payload.get("status_code")
+        text = payload["text"]
+        if status_code == 404:
+            _raise_cached_http_error(url, status_code, text)
+        return text
+
+    def get(self, url):
+        import deps
+
+        timing = deps.timing
+        with timing.time_stage("http.get.cached"):
+            url_lock = self._source_cache._get_url_lock(url)
+            lock_wait_timer = timing.stage_start("cache.http.lock_wait.url")
+            with url_lock:
+                lock_wait_timer.end()
+                with timing.time_stage("cache.http.fetch"):
+                    local_text = self._get_local_response(url)
+                    if local_text is not None:
+                        return local_text
+
+                    cached_text = self._source_cache._read_cached_response(url)
+                    if cached_text is not None:
+                        return cached_text
+
+                    try:
+                        with timing.time_stage("cache.http.fetch_miss"):
+                            text = self._source_cache._request_text(url)
+                        self._record_response(url, text, status_code=None)
+                        return text
+                    except Exception as exc:
+                        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                        if status_code == 404:
+                            text = getattr(exc.response, "text", "")
+                            self._record_response(url, text, status_code=404)
+                        raise
+
+    def commit_to(self, other):
         if self._committed:
             return
         for url, payload in self._responses.items():
-            self._cache._set_cached_response(
+            other._set_cached_response(
                 url,
                 payload["text"],
                 status_code=payload.get("status_code"),
@@ -122,8 +172,6 @@ class HttpCache:
         self._entries = self._load_entries()
         self._cache_index = {entry["url"]: entry["resultKey"] for entry in self._entries}
         self._entry_by_url = {entry["url"]: entry for entry in self._entries}
-
-        self._deferred_session = None
 
     def _host_config(self, url):
         host = urlparse(url).netloc.lower()
@@ -255,42 +303,33 @@ class HttpCache:
         resp.raise_for_status()
         return resp.text
 
-    def _fetch_locked_deferred(self, url):
+    def _read_cached_response(self, url):
         import deps
 
         timing = deps.timing
+        result_key = self._cache_index.get(url)
+        if result_key is None:
+            return None
+        entry = self._entry_for_url(url)
+        path = self._results_dir / result_key
         try:
-            with timing.time_stage("cache.http.fetch_miss"):
-                text = self._request_text(url)
-            self._deferred_session.record_response(url, text, status_code=None)
-            return text
-        except Exception as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            with timing.time_stage("cache.http.read_hit"):
+                text = path.read_text(encoding="utf-8")
+            status_code = entry.get("statusCode") if entry else None
             if status_code == 404:
-                text = getattr(exc.response, "text", "")
-                self._deferred_session.record_response(url, text, status_code=404)
-            raise
+                _raise_cached_http_error(url, status_code, text)
+            return text
+        except FileNotFoundError:
+            self._remove_entry_for_url(url)
+            return None
 
     def _fetch_locked(self, url):
         import deps
 
         timing = deps.timing
-        if self._deferred_session is not None:
-            return self._fetch_locked_deferred(url)
-
-        result_key = self._cache_index.get(url)
-        if result_key is not None:
-            entry = self._entry_for_url(url)
-            path = self._results_dir / result_key
-            try:
-                with timing.time_stage("cache.http.read_hit"):
-                    text = path.read_text(encoding="utf-8")
-                status_code = entry.get("statusCode") if entry else None
-                if status_code == 404:
-                    _raise_cached_http_error(url, status_code, text)
-                return text
-            except FileNotFoundError:
-                self._remove_entry_for_url(url)
+        cached_text = self._read_cached_response(url)
+        if cached_text is not None:
+            return cached_text
 
         try:
             with timing.time_stage("cache.http.fetch_miss"):
@@ -316,16 +355,8 @@ class HttpCache:
                 with timing.time_stage("cache.http.fetch"):
                     return self._fetch_locked(url)
 
-    @contextmanager
-    def create_deferred_session(self):
-        if self._deferred_session is not None:
-            raise RuntimeError("Nested deferred cache session is not supported.")
-        session = DeferredCacheSession(self)
-        self._deferred_session = session
-        try:
-            yield session
-        finally:
-            self._deferred_session = None
+    def create_write_deferred_session(self):
+        return WriteDeferredCacheSession(self)
 
 
 def _raise_cached_http_error(url, status_code, text):
