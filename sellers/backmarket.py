@@ -29,6 +29,7 @@ from sellers.spec import SellerSpec
 _CONDITION_GROUP_LABEL = "Condition"
 _STORAGE_GROUP_LABEL = "Storage (GB)"
 _BACKMARKET_MODEL_SLUGS = {
+    # Google Pixel family
     normalize_model_name("Pixel 6a"): "google-pixel-6a",
     normalize_model_name("Pixel 6"): "google-pixel-6",
     normalize_model_name("Pixel 6 Pro"): "google-pixel-6-pro",
@@ -49,6 +50,35 @@ _BACKMARKET_MODEL_SLUGS = {
     normalize_model_name("Pixel 10 Pro"): "google-pixel-10-pro",
     normalize_model_name("Pixel 10 Pro XL"): "google-pixel-10-pro-xl",
     normalize_model_name("Pixel 10 Pro Fold"): "google-pixel-10-pro-fold",
+    # Apple iPhone family
+    normalize_model_name("iPhone 12"): "apple-iphone-12",
+    normalize_model_name("iPhone 13"): "apple-iphone-13",
+    normalize_model_name("iPhone 14"): "apple-iphone-14",
+    normalize_model_name("iPhone 14 Plus"): "apple-iphone-14-plus",
+    normalize_model_name("iPhone 14 Pro"): "apple-iphone-14-pro",
+    normalize_model_name("iPhone 14 Pro Max"): "apple-iphone-14-pro-max",
+    normalize_model_name("iPhone 15"): "apple-iphone-15",
+    normalize_model_name("iPhone 15 Plus"): "apple-iphone-15-plus",
+    normalize_model_name("iPhone 15 Pro"): "apple-iphone-15-pro",
+    normalize_model_name("iPhone 15 Pro Max"): "apple-iphone-15-pro-max",
+    normalize_model_name("iPhone 16"): "apple-iphone-16",
+    normalize_model_name("iPhone 16 Plus"): "apple-iphone-16-plus",
+    normalize_model_name("iPhone 16 Pro"): "apple-iphone-16-pro",
+    normalize_model_name("iPhone 16 Pro Max"): "apple-iphone-16-pro-max",
+    normalize_model_name("iPhone 16e"): "apple-iphone-16e",
+    normalize_model_name("iPhone Se (2022)"): "apple-iphone-se-2022",
+    # Samsung Galaxy family
+    normalize_model_name("Galaxy S22"): "samsung-galaxy-s22",
+    normalize_model_name("Galaxy S22 Plus"): "samsung-galaxy-s22-plus",
+    normalize_model_name("Galaxy S22 Ultra"): "samsung-galaxy-s22-ultra",
+    normalize_model_name("Galaxy S23"): "samsung-galaxy-s23",
+    normalize_model_name("Galaxy S23 Plus"): "samsung-galaxy-s23-plus",
+    normalize_model_name("Galaxy S23 Ultra"): "samsung-galaxy-s23-ultra",
+    normalize_model_name("Galaxy S24"): "samsung-galaxy-s24",
+    normalize_model_name("Galaxy S24 Plus"): "samsung-galaxy-s24-plus",
+    normalize_model_name("Galaxy S24 Ultra"): "samsung-galaxy-s24-ultra",
+    normalize_model_name("Galaxy Z Flip5"): "samsung-galaxy-z-flip-5",
+    normalize_model_name("Galaxy Z Fold5"): "samsung-galaxy-z-fold-5",
 }
 
 
