@@ -160,6 +160,17 @@ def build_parser():
         action="help",
         help="Show this help message and exit.",
     )
+    general_group = parser.add_argument_group("general options")
+    general_group.add_argument(
+        "-d",
+        "--data-dir",
+        default="./data",
+        metavar="PATH",
+        help=(
+            "Directory for runtime data files (default: ./data), including "
+            "HTTP cache and other persisted scraper data."
+        ),
+    )
     search_group = parser.add_argument_group("search scope", CONDITION_FILTER_NOTE)
     search_group.add_argument(
         "--search-sellers",
@@ -256,13 +267,6 @@ def build_parser():
         dest="profile_truncate",
         action="store_false",
         help="Disable timing table truncation.",
-    )
-    other_group.add_argument(
-        "-d",
-        "--data-dir",
-        default="./data",
-        metavar="PATH",
-        help="Directory containing runtime data files (default: ./data).",
     )
     display_group.add_argument(
         "--table-direction",
