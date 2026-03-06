@@ -3,6 +3,7 @@
 - Keep temporary/debug files inside `.tmp/` (repo-local), not `/tmp`.
 - Reason: using `.tmp/` avoids sandbox/escalation prompts and keeps scratch artifacts in the workspace.
 - Keep `README.md` up to date whenever code changes alter behavior, flags, workflows, or outputs.
+- For non-Unicode output, rely on `deps/printers.py`'s Unicode-to-ASCII map instead of adding ad-hoc fallbacks at call sites.
 - Agent SHOULD proactively and frequently create commits when appropriate (especially after coherent, validated progress).
 - If a change is a minor tweak to the immediately previous change, amend the previous commit instead of creating a new commit.
 - When amending, update the commit message if needed so it accurately reflects the revised scope.
