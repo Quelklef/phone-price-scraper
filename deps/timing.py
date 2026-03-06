@@ -99,7 +99,7 @@ def time_stage(stage: str):
         timer.end()
 
 
-def render_summary():
+def render_summary(*, truncate=True, truncate_threshold=0.05):
     rows = [
         (path, stat.count, stat.total_s, (stat.total_s / stat.count) if stat.count else 0.0, stat.max_s, stat.event_ids)
         for path, stat in _STATS.items()
@@ -109,10 +109,15 @@ def render_summary():
 
     rows = _prune_redundant_rows(rows)
     rows.sort(key=lambda row: row[2], reverse=True)
-    program_total = next((row[2] for row in rows if row[0] == ("program",)), rows[0][2])
-    threshold_s = program_total * 0.05
-    kept_rows = [row for row in rows if row[2] >= threshold_s]
-    truncated_count = len(rows) - len(kept_rows)
+    if truncate:
+        program_total = next((row[2] for row in rows if row[0] == ("program",)), rows[0][2])
+        threshold_s = program_total * truncate_threshold
+        kept_rows = [row for row in rows if row[2] >= threshold_s]
+        truncated_count = len(rows) - len(kept_rows)
+    else:
+        threshold_s = 0.0
+        kept_rows = rows
+        truncated_count = 0
 
     stage_w = max(len("Stage Path"), max(len(f" {glyphs.ARROW} ".join(row[0])) for row in kept_rows))
     count_w = max(len("Count"), 5)

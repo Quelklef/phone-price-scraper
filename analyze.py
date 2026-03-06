@@ -152,6 +152,8 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
 
 def run(
     profile_performance=False,
+    profile_truncate=True,
+    profile_truncate_threshold=0.05,
     output_csv_path=None,
     table_direction="bottom-to-top",
     search_sellers: list[str] | None = None,
@@ -245,6 +247,9 @@ def run(
     if profile_performance:
         # Print timing after the program stage closes so "program" is finalized.
         pretty_log.section("Timing")
-        for line in deps.timing.render_summary():
+        for line in deps.timing.render_summary(
+            truncate=profile_truncate,
+            truncate_threshold=profile_truncate_threshold,
+        ):
             deps.printer.print(line)
     return results

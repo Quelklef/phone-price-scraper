@@ -126,6 +126,26 @@ def _parse_conditions_csv(raw_value):
     )
 
 
+def _parse_percentage_string(raw_value):
+    text = str(raw_value).strip()
+    if not text.endswith("%"):
+        raise argparse.ArgumentTypeError(
+            f"Invalid percentage: {raw_value!r}. Use format like 5%."
+        )
+    number_text = text[:-1].strip()
+    try:
+        number = float(number_text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"Invalid percentage: {raw_value!r}. Use numeric format like 5%."
+        ) from exc
+    if number < 0 or number > 100:
+        raise argparse.ArgumentTypeError(
+            f"Invalid percentage: {raw_value!r}. Must be between 0% and 100%."
+        )
+    return number / 100.0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
@@ -218,6 +238,26 @@ def build_parser():
         help="Show timing/profiling details at the end.",
     )
     other_group.add_argument(
+        "--profile-truncate-threshold",
+        default=_parse_percentage_string("5%"),
+        type=_parse_percentage_string,
+        metavar="PCT",
+        help="Truncate timing rows below this percent of total runtime (e.g. 5%%).",
+    )
+    other_group.add_argument(
+        "--profile-truncate",
+        dest="profile_truncate",
+        action="store_true",
+        default=True,
+        help="Enable timing table truncation (default).",
+    )
+    other_group.add_argument(
+        "--profile-no-truncate",
+        dest="profile_truncate",
+        action="store_false",
+        help="Disable timing table truncation.",
+    )
+    other_group.add_argument(
         "-d",
         "--data-dir",
         default="./data",
@@ -279,6 +319,8 @@ def main():
 
     return run(
         profile_performance=args.profile_performance,
+        profile_truncate=args.profile_truncate,
+        profile_truncate_threshold=args.profile_truncate_threshold,
         output_csv_path=args.output_csv,
         table_direction=args.table_direction,
         search_sellers=args.search_sellers,

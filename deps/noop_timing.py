@@ -15,5 +15,5 @@ def time_stage(_stage: str):
     yield
 
 
-def render_summary():
+def render_summary(*, truncate=True, truncate_threshold=0.05):
     return []
