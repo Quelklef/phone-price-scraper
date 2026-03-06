@@ -39,6 +39,12 @@ CONDITION_FILTER_NOTE = (
     "Note: --search-conditions is limited to the known condition set: good,best."
 )
 
+_ANSI_RESET = "\033[0m"
+_ANSI_BOLD = "\033[1m"
+_ANSI_CYAN = "\033[36m"
+_ANSI_YELLOW = "\033[33m"
+_ANSI_GREEN = "\033[32m"
+
 
 def _parse_csv(raw_value, field_name):
     raw_items = [item.strip() for item in raw_value.split(",")]
@@ -163,6 +169,78 @@ class _ColorsAction(argparse.Action):
         setattr(namespace, self.dest, _parse_bool(values))
 
 
+class _DataDirAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+        setattr(namespace, "data_dir_explicit", True)
+
+
+def _style(text, code, *, enabled):
+    if not enabled:
+        return text
+    return f"{code}{text}{_ANSI_RESET}"
+
+
+def _resolve_data_dir(path):
+    return Path(path).expanduser()
+
+
+def _choose_data_dir(args):
+    # If the default data dir is missing, interactively confirm or override it.
+    chosen = _resolve_data_dir(args.data_dir)
+    if args.data_dir_explicit or chosen.exists():
+        return chosen
+
+    custom_path_used = False
+
+    def _prompt_custom_path_tip():
+        if not custom_path_used:
+            return
+        tip_prefix = _style(
+            "Tip: next time, pass this explicitly with -d ",
+            _ANSI_CYAN,
+            enabled=args.colors,
+        )
+        tip_path = _style(
+            str(chosen),
+            _ANSI_BOLD + _ANSI_YELLOW,
+            enabled=args.colors,
+        )
+        tip_suffix = _style(
+            ". Press Enter to continue. ",
+            _ANSI_CYAN,
+            enabled=args.colors,
+        )
+        input(f"{tip_prefix}{tip_path}{tip_suffix}")
+
+    try:
+        while not chosen.exists():
+            resolved = chosen.resolve()
+            prose = _style(
+                "Creating data dir at ",
+                _ANSI_CYAN,
+                enabled=args.colors,
+            )
+            path = _style(str(resolved), _ANSI_BOLD + _ANSI_YELLOW, enabled=args.colors)
+            options = "(yes=Enter, no=Ctrl-C/D, or specify a custom path)"
+            user_input = input(
+                f"{prose}{path}{_style('. Ok? ', _ANSI_CYAN, enabled=args.colors)}"
+                f"{options}{_style(': ', _ANSI_CYAN, enabled=args.colors)}"
+            ).strip()
+            if not user_input:
+                chosen.mkdir(parents=True, exist_ok=True)
+                _prompt_custom_path_tip()
+                return chosen
+            chosen = _resolve_data_dir(Path(user_input))
+            custom_path_used = True
+        _prompt_custom_path_tip()
+        return chosen
+    except (KeyboardInterrupt, EOFError):
+        print()
+        print("Cancelled.")
+        raise SystemExit(130)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
@@ -183,6 +261,7 @@ def build_parser():
         "--data-dir",
         default="./data",
         metavar="PATH",
+        action=_DataDirAction,
         help=(
             "Directory for runtime data files (default: ./data), including "
             "HTTP cache and other persisted scraper data."
@@ -305,6 +384,7 @@ def build_parser():
 
 def parse_args():
     parser = build_parser()
+    parser.set_defaults(data_dir_explicit=False)
     args = parser.parse_args()
     args.search_models = (
         _parse_models_csv(args.search_models)
@@ -331,7 +411,8 @@ def parse_args():
 
 def main():
     _parser, args = parse_args()
-    data_dir = Path(args.data_dir)
+    data_dir = _choose_data_dir(args)
+    print(f"Using data directory {data_dir.resolve()}\n")
     deps.init_deps(
         profile_performance=args.profile_performance,
         unicode=args.unicode,
