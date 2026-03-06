@@ -5,3 +5,4 @@ __init__.py
 data.old
 data/cookies/
 results.csv
+.codex/

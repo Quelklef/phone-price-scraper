@@ -22,6 +22,16 @@
                   python3 ./main.py "$@"
                 '';
               };
+              run-codex = {
+                description = "Run OpenAI Codex";
+                script = ''
+                  [ -d node_modules ] || npm i
+                  codex_home=$(realpath ./.codex)
+                  echo "Using CODEX_HOME=$codex_home"
+                  mkdir -p $codex_home
+                  CODEX_HOME="$codex_home" npx codex
+                '';
+              };
             };
           })
         ];
@@ -37,10 +47,13 @@
 
           shellHook = ''
             ${shelpersCfg.functions}
+
             # Make all shelpers functions available in child `bash -lc` shells.
             ${lib.concatMapStringsSep "\n"
               (name: "export -f ${name}")
               (lib.attrNames shelpersCfg.files)}
+
+            shelp
           '';
         };
 
