@@ -9,10 +9,6 @@ import requests
 
 import pretty_log
 
-_PROJECT_DIR = Path(__file__).resolve().parent.parent
-_COOKIE_DIR = _PROJECT_DIR / "data" / "cookies"
-_CACHE_DIR = _PROJECT_DIR / "data" / "http-cache"
-
 _HOST_CONFIGS = {
     "www.amazon.com": {
         "seller": "amazon",
@@ -75,15 +71,15 @@ class HttpCache:
     def __init__(
         self,
         *,
-        cache_dir=None,
-        cookie_dir=None,
+        cache_dir,
+        cookie_dir,
         host_configs=None,
         default_config=None,
     ):
-        self._cache_dir = Path(cache_dir) if cache_dir is not None else _CACHE_DIR
+        self._cache_dir = Path(cache_dir)
         self._results_dir = self._cache_dir / "results"
         self._entries_file = self._cache_dir / "entries.json"
-        self._cookie_dir = Path(cookie_dir) if cookie_dir is not None else _COOKIE_DIR
+        self._cookie_dir = Path(cookie_dir)
 
         self._host_configs = host_configs or _HOST_CONFIGS
         self._default_config = default_config or _DEFAULT_CONFIG

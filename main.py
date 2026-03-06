@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 import deps
 from core import Model, Storage, normalize_model_name
@@ -216,6 +217,13 @@ def build_parser():
         action="store_true",
         help="Show timing/profiling details at the end.",
     )
+    other_group.add_argument(
+        "-d",
+        "--data-dir",
+        default="./data",
+        metavar="PATH",
+        help="Directory containing runtime data files (default: ./data).",
+    )
     display_group.add_argument(
         "--table-direction",
         choices=("top-to-bottom", "bottom-to-top"),
@@ -259,10 +267,13 @@ def parse_args():
 
 def main():
     _parser, args = parse_args()
+    data_dir = Path(args.data_dir)
     deps.init_deps(
         profile_performance=args.profile_performance,
         unicode=args.unicode,
         colors=args.colors,
+        known_prices_data_path=data_dir / "known-prices.json",
+        http_get_data_dir=data_dir / "http_get",
     )
     from analyze import run
 

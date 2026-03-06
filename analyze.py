@@ -248,15 +248,3 @@ def run(
         for line in deps.timing.render_summary():
             deps.printer.print(line)
     return results
-
-
-if __name__ == "__main__":
-    from main import DEFAULT_SEARCH_MODELS
-
-    deps.init_deps(profile_performance=False, unicode=True, colors=True)
-    run(
-        profile_performance=False,
-        search_models=list(DEFAULT_SEARCH_MODELS),
-        search_storages=[128, 256, 512],
-        search_conditions=["good", "best"],
-    )

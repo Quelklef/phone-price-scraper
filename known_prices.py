@@ -1,13 +1,12 @@
 import json
 from pathlib import Path
 
+import deps
 from core import Condition, Model, Storage, normalize_model_name
 
 # Partial expected best-deal checks across all sources.
 # IMPORTANT: Do not change known prices without explicit user confirmation.
 # Stored in JSON for easier editing and non-code diffs.
-_KNOWN_PRICES_PATH = Path(__file__).resolve().parent / "data" / "known-prices.json"
-KNOWN_PRICES_PATH = _KNOWN_PRICES_PATH
 KnownPriceKey = tuple[str, Model, Storage, Condition]
 KnownPriceValue = tuple[frozenset[str], float | None]
 
@@ -83,12 +82,12 @@ def _normalize_verified_at(raw_verified_at, key):
     raise ValueError(f"Invalid verified_at for known price key {key}: {raw_verified_at!r}")
 
 
-def _load_known_prices():
-    if not _KNOWN_PRICES_PATH.exists():
+def _load_known_prices(path):
+    if not path.exists():
         # Allow cold-start runs when data dir/cache is reset or moved.
         return {}
 
-    rows = json.loads(_KNOWN_PRICES_PATH.read_text(encoding="utf-8"))
+    rows = json.loads(path.read_text(encoding="utf-8"))
     prices: dict[KnownPriceKey, KnownPriceValue] = {}
     for row in rows:
         key = _key_for_row(row)
@@ -112,10 +111,13 @@ def load_known_price_rows():
 
 
 def save_known_price_rows(rows):
+    global KNOWN_PRICES
     KNOWN_PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
     KNOWN_PRICES_PATH.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    KNOWN_PRICES = _load_known_prices(KNOWN_PRICES_PATH)
 
 
+KNOWN_PRICES_PATH = Path(deps.config.known_prices_data_path)
 # Key: (seller, model, storage, condition)
 # Value: (checked_query_urls, best_price)
-KNOWN_PRICES: dict[KnownPriceKey, KnownPriceValue] = _load_known_prices()
+KNOWN_PRICES: dict[KnownPriceKey, KnownPriceValue] = _load_known_prices(KNOWN_PRICES_PATH)
