@@ -161,7 +161,7 @@ def run(
     search_storages: list[Storage] | None = None,
     search_conditions: list[str] | None = None,
 ):
-    with deps.timing.time_stage("program"):
+    with deps.timing.time_stage("top"):
         pretty_log.set_model_width_from_models(search_models or [])
         active_conditions = [
             condition for condition in Condition
@@ -245,7 +245,7 @@ def run(
         pretty_log.known_price_summary(known_price_xref_count, len(results), known_price_xref_by_seller)
 
     if profile_performance:
-        # Print timing after the program stage closes so "program" is finalized.
+        # Print timing after the top stage closes so "top" is finalized.
         pretty_log.section("Timing")
         for line in deps.timing.render_summary(
             truncate=profile_truncate,

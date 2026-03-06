@@ -5,9 +5,9 @@ At a glance:
 - The summary prints count/total/avg/max per stage path.
 
 How paths work:
-- If `html.parse` runs inside `program -> seller.amazon`, we record:
-  - `program -> seller.amazon -> html.parse` (very specific), and also
-  - broader views like `program -> html.parse` and `html.parse`.
+- If `html.parse` runs inside `top -> seller.amazon`, we record:
+  - `top -> seller.amazon -> html.parse` (very specific), and also
+  - broader views like `top -> html.parse` and `html.parse`.
 - This lets one run answer both:
   - "How expensive is html parsing inside amazon?"
   - "How expensive is html parsing overall?"
@@ -110,8 +110,8 @@ def render_summary(*, truncate=True, truncate_threshold=0.05):
     rows = _prune_redundant_rows(rows)
     rows.sort(key=lambda row: row[2], reverse=True)
     if truncate:
-        program_total = next((row[2] for row in rows if row[0] == ("program",)), rows[0][2])
-        threshold_s = program_total * truncate_threshold
+        top_total = next((row[2] for row in rows if row[0] == ("top",)), rows[0][2])
+        threshold_s = top_total * truncate_threshold
         kept_rows = [row for row in rows if row[2] >= threshold_s]
         truncated_count = len(rows) - len(kept_rows)
     else:
@@ -166,10 +166,10 @@ def _iter_path_projections(path: tuple[str, ...]):
         projections = []
         # For one stage execution, generate path views from most specific to
         # broader views. Example:
-        # path=("program", "seller.amazon", "html.parse")
+        # path=("top", "seller.amazon", "html.parse")
         # produces:
-        # - ("program", "seller.amazon", "html.parse")
-        # - ("program", "html.parse")
+        # - ("top", "seller.amazon", "html.parse")
+        # - ("top", "html.parse")
         # - ("seller.amazon", "html.parse")
         # - ("html.parse",)
         #
