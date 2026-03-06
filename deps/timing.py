@@ -235,7 +235,9 @@ def _prune_redundant_rows(rows):
         def _path_score(path):
             idxs = _subseq_indices(path)
             start_rank = idxs[0] if idxs is not None else len(anchor) + 1
-            return (start_rank, len(path), path)
+            # Prefer paths that keep earlier context, then keep more of that
+            # context (dropping less), then lexical tie-break.
+            return (start_rank, -len(path), path)
 
         kept.append(min(group_rows, key=lambda row: _path_score(row[0])))
     return kept
