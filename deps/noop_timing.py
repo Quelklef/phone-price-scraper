@@ -6,12 +6,12 @@ class _NoOpTimer:
         return None
 
 
-def stage_start(_stage: str):
+def stage_start(*_stages: str):
     return _NoOpTimer()
 
 
 @contextmanager
-def time_stage(_stage: str):
+def time_stage(*_stages: str):
     yield
 
 

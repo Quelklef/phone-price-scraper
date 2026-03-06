@@ -2,6 +2,7 @@
 
 At a glance:
 - Use `time_stage("name")` (or `stage_start("name")`) to time code blocks.
+- Use `time_stage("a", "b", ...)` as shorthand for immediate nested scopes.
 - The summary prints count/total/avg/max per stage path.
 
 How paths work:
@@ -68,8 +69,9 @@ def _normalize_stage(stage):
 
 
 class StageTimer:
-    def __init__(self, path):
-        self._path = path
+    def __init__(self, paths, *, pop_count):
+        self._paths = paths
+        self._pop_count = pop_count
         self._start = time.perf_counter()
         self._ended = False
 
@@ -79,20 +81,28 @@ class StageTimer:
         self._ended = True
         elapsed = time.perf_counter() - self._start
         event_id = _next_event_id()
-        for projection in _iter_path_projections(self._path):
+        all_projections: set[tuple[str, ...]] = set()
+        for path in self._paths:
+            all_projections.update(_iter_path_projections(path))
+        for projection in all_projections:
             _record(projection, elapsed, event_id)
-        _PATH_STACK.pop()
+        del _PATH_STACK[-self._pop_count:]
 
 
-def stage_start(stage: str):
-    norm_stage = _normalize_stage(stage)
-    _PATH_STACK.append(norm_stage)
-    return StageTimer(tuple(_PATH_STACK))
+def stage_start(*stages: str):
+    if not stages:
+        raise ValueError("stage_start requires at least one stage")
+    norm_stages = tuple(_normalize_stage(stage) for stage in stages)
+    prefix_paths = []
+    for stage in norm_stages:
+        _PATH_STACK.append(stage)
+        prefix_paths.append(tuple(_PATH_STACK))
+    return StageTimer(prefix_paths, pop_count=len(norm_stages))
 
 
 @contextmanager
-def time_stage(stage: str):
-    timer = stage_start(stage)
+def time_stage(*stages: str):
+    timer = stage_start(*stages)
     try:
         yield
     finally:

@@ -110,24 +110,21 @@ def _load_known_prices(path):
 
 
 def get_known_price(key):
-    with deps.timing.time_stage("known_prices"):
-        with deps.timing.time_stage("lookup"):
-            return _load_known_prices(KNOWN_PRICES_PATH).get(key)
+    with deps.timing.time_stage("known_prices", "lookup"):
+        return _load_known_prices(KNOWN_PRICES_PATH).get(key)
 
 
 def load_known_price_rows():
-    with deps.timing.time_stage("known_prices"):
-        with deps.timing.time_stage("load_rows"):
-            if not KNOWN_PRICES_PATH.exists():
-                return []
-            rows = json.loads(KNOWN_PRICES_PATH.read_text(encoding="utf-8"))
-            if not isinstance(rows, list):
-                raise ValueError(f"Known prices file must be a list: {KNOWN_PRICES_PATH}")
-            return rows
+    with deps.timing.time_stage("known_prices", "load_rows"):
+        if not KNOWN_PRICES_PATH.exists():
+            return []
+        rows = json.loads(KNOWN_PRICES_PATH.read_text(encoding="utf-8"))
+        if not isinstance(rows, list):
+            raise ValueError(f"Known prices file must be a list: {KNOWN_PRICES_PATH}")
+        return rows
 
 
 def save_known_price_rows(rows):
-    with deps.timing.time_stage("known_prices"):
-        with deps.timing.time_stage("save_rows"):
-            KNOWN_PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
-            KNOWN_PRICES_PATH.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    with deps.timing.time_stage("known_prices", "save_rows"):
+        KNOWN_PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        KNOWN_PRICES_PATH.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
