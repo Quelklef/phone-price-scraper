@@ -12,14 +12,22 @@
       let
         pkgs = import nixpkgs { inherit system; };
         lib = pkgs.lib;
+
+        python3 = pkgs.python3.withPackages (py-pkgs: [
+          py-pkgs.requests
+          py-pkgs.beautifulsoup4
+          py-pkgs.lxml
+        ]);
+
         shelpersCfg = (shelpers.lib pkgs).eval-shelpers [
           ({ shelp, ... }: {
             shelpers."."."App" = {
               inherit shelp;
               run-app = {
                 description = "Run main.py";
+                make-app = true;
                 script = ''
-                  python3 ./main.py "$@"
+                  ${lib.getExe python3} ./main.py "$@"
                 '';
               };
               run-codex = {
@@ -39,10 +47,7 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = [
-            pkgs.python3
-            pkgs.python3Packages.requests
-            pkgs.python3Packages.beautifulsoup4
-            pkgs.python3Packages.lxml
+            python3
           ];
 
           shellHook = ''
@@ -58,7 +63,8 @@
         };
 
         # App forms of shelpers commands (for `nix run .#run-app`).
-        apps = shelpersCfg.apps;
+        apps = shelpersCfg.apps
+          // { default = shelpersCfg.apps.run-app; };
 
         # Generated shelper script files (used by shelpers wrappers).
         shelpers = shelpersCfg.files;
