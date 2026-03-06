@@ -39,9 +39,9 @@ class _StageStat:
 
 
 _STATS: dict[tuple[str, ...], _StageStat] = {}
-_CTX_STACK: list[str] = []
+_PATH_STACK: list[str] = []
 _NEXT_EVENT_ID = 1
-_PATH_PROJECTIONS_CACHE: dict[tuple[tuple[str, ...], str], tuple[tuple[str, ...], ...]] = {}
+_PATH_PROJECTIONS_CACHE: dict[tuple[str, ...], tuple[tuple[str, ...], ...]] = {}
 
 
 def _next_event_id():
@@ -68,9 +68,8 @@ def _normalize_stage(stage):
 
 
 class StageTimer:
-    def __init__(self, stage, ctx_before):
-        self._stage = stage
-        self._ctx_before = ctx_before
+    def __init__(self, path):
+        self._path = path
         self._start = time.perf_counter()
         self._ended = False
 
@@ -80,16 +79,15 @@ class StageTimer:
         self._ended = True
         elapsed = time.perf_counter() - self._start
         event_id = _next_event_id()
-        for path in _iter_paths_for_stage(self._ctx_before, self._stage):
-            _record(path, elapsed, event_id)
-        _CTX_STACK.pop()
+        for projection in _iter_path_projections(self._path):
+            _record(projection, elapsed, event_id)
+        _PATH_STACK.pop()
 
 
 def stage_start(stage: str):
     norm_stage = _normalize_stage(stage)
-    ctx_before = tuple(_CTX_STACK)
-    _CTX_STACK.append(norm_stage)
-    return StageTimer(norm_stage, ctx_before)
+    _PATH_STACK.append(norm_stage)
+    return StageTimer(tuple(_PATH_STACK))
 
 
 @contextmanager
@@ -155,15 +153,15 @@ def render_summary():
     return lines
 
 
-def _iter_paths_for_stage(context: tuple[str, ...], stage: str):
-    cache_key = (context, stage)
+def _iter_path_projections(path: tuple[str, ...]):
+    cache_key = path
     cached = _PATH_PROJECTIONS_CACHE.get(cache_key)
     if cached is None:
-        n = len(context)
-        paths = []
-        # For one stage execution, generate all path views from most specific
-        # to broader views. Example:
-        # context=("program", "seller.amazon"), stage="html.parse"
+        n = len(path)
+        projections = []
+        # For one stage execution, generate path views from most specific to
+        # broader views. Example:
+        # path=("program", "seller.amazon", "html.parse")
         # produces:
         # - ("program", "seller.amazon", "html.parse")
         # - ("program", "html.parse")
@@ -171,13 +169,20 @@ def _iter_paths_for_stage(context: tuple[str, ...], stage: str):
         # - ("html.parse",)
         #
         # This is what enables both detailed and rolled-up summary rows.
-        for k in range(n + 1):
-            for idxs in combinations(range(n), k):
-                prefix = tuple(context[i] for i in idxs)
-                if prefix and prefix[-1] == stage:
+        #
+        # IMPORTANT: projected views must preserve the final path item (the
+        # event leaf). If projections were allowed to drop that final item, one
+        # event like ("a","b","c") would also emit ("a","b"), which belongs to
+        # a different event scope and would create cross-scope double-counting
+        # artifacts in summary rows.
+        leaf = path[-1]
+        for k in range(n):
+            for idxs in combinations(range(n - 1), k):
+                prefix = tuple(path[i] for i in idxs)
+                if prefix and prefix[-1] == leaf:
                     continue
-                paths.append(prefix + (stage,))
-        cached = tuple(paths)
+                projections.append(prefix + (leaf,))
+        cached = tuple(projections)
         _PATH_PROJECTIONS_CACHE[cache_key] = cached
     return cached
 
