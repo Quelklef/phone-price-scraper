@@ -62,9 +62,14 @@
           '';
         };
 
-        # App forms of shelpers commands (for `nix run .#run-app`).
-        apps = shelpersCfg.apps
-          // { default = shelpersCfg.apps.run-app; };
+        apps.default = {
+          type = "app";
+          program =
+            let script = pkgs.writeShellScript "phone-price-scraper" ''
+                ${lib.getExe python3} ${./.}/main.py "$@"
+              '';
+            in "${script}";
+        };
 
         # Generated shelper script files (used by shelpers wrappers).
         shelpers = shelpersCfg.files;
