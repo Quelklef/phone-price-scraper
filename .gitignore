@@ -2,6 +2,6 @@
 node_modules/
 .tmp*
 data.old
-data/cookies/
+data/http_get/cookies/
 results.csv
 .codex/
