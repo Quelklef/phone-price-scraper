@@ -192,52 +192,59 @@ def _iter_path_projections(path: tuple[str, ...]):
     return cached
 
 
-def _is_subsequence(shorter: tuple[str, ...], longer: tuple[str, ...]):
-    if len(shorter) > len(longer):
-        return False
-    it = iter(longer)
-    return all(any(part == cur for cur in it) for part in shorter)
-
-
 def _prune_redundant_rows(rows):
     # Rows with identical event IDs describe the same underlying timed events.
-    # Keep one representative row per event-ID set.
-    #
-    # Selection policy:
-    # - preserve beginning context when possible
-    # - then prefer dropping trailing specificity
-    # This keeps labels like "program -> html.parse" over both
-    # "html.parse" (drops context) and
-    # "program -> seller.amazon -> html.parse" (too specific).
+    # Within each event-ID set:
+    # 1) Repeatedly: if A is a prefix of B, drop B.
+    # 2) After (1) reaches a fixed point, repeatedly: if A is a strict
+    #    supersequence of B, drop B.
     grouped: dict[tuple[int, ...], list[tuple]] = {}
     for row in rows:
         grouped.setdefault(tuple(sorted(row[5])), []).append(row)
 
+    def _is_subsequence(subseq, seq):
+        if len(subseq) > len(seq):
+            return False
+        it = iter(seq)
+        return all(any(part == cur for cur in it) for part in subseq)
+
     kept = []
     for group_rows in grouped.values():
-        anchor = max((row[0] for row in group_rows), key=lambda p: (len(p), p))
+        rows_by_path = {row[0]: row for row in group_rows}
+        active_paths = set(rows_by_path)
 
-        def _subseq_indices(path):
-            idxs = []
-            start = 0
-            for part in path:
-                found = None
-                for i in range(start, len(anchor)):
-                    if anchor[i] == part:
-                        found = i
-                        break
-                if found is None:
-                    return None
-                idxs.append(found)
-                start = found + 1
-            return tuple(idxs)
+        # Phase 1: strict prefix elimination to fixed point.
+        changed = True
+        while changed:
+            changed = False
+            to_drop = set()
+            active_list = list(active_paths)
+            for a in active_list:
+                for b in active_list:
+                    if a == b:
+                        continue
+                    if len(a) < len(b) and b[:len(a)] == a:
+                        to_drop.add(b)
+            if to_drop:
+                active_paths -= to_drop
+                changed = True
 
-        def _path_score(path):
-            idxs = _subseq_indices(path)
-            start_rank = idxs[0] if idxs is not None else len(anchor) + 1
-            # Prefer paths that keep earlier context, then keep more of that
-            # context (dropping less), then lexical tie-break.
-            return (start_rank, -len(path), path)
+        # Phase 2: strict supersequence elimination to fixed point.
+        changed = True
+        while changed:
+            changed = False
+            to_drop = set()
+            active_list = list(active_paths)
+            for a in active_list:
+                for b in active_list:
+                    if a == b:
+                        continue
+                    if len(a) > len(b) and _is_subsequence(b, a):
+                        to_drop.add(b)
+            if to_drop:
+                active_paths -= to_drop
+                changed = True
 
-        kept.append(min(group_rows, key=lambda row: _path_score(row[0])))
+        for path in active_paths:
+            kept.append(rows_by_path[path])
     return kept
