@@ -9,6 +9,7 @@ from core import Condition, Model, Storage, normalize_model_name
 # Stored in JSON for easier editing and non-code diffs.
 KnownPriceKey = tuple[str, Model, Storage, Condition]
 KnownPriceValue = tuple[frozenset[str], float | None]
+KNOWN_PRICES_PATH = Path(deps.config.known_prices_data_path)
 
 
 def _normalize_model(raw_model):
@@ -83,41 +84,50 @@ def _normalize_verified_at(raw_verified_at, key):
 
 
 def _load_known_prices(path):
-    if not path.exists():
-        # Allow cold-start runs when data dir/cache is reset or moved.
-        return {}
+    with deps.timing.time_stage("load"):
+        if not path.exists():
+            # Allow cold-start runs when data dir/cache is reset or moved.
+            return {}
 
-    rows = json.loads(path.read_text(encoding="utf-8"))
-    prices: dict[KnownPriceKey, KnownPriceValue] = {}
-    for row in rows:
-        key = _key_for_row(row)
-        if key in prices:
-            raise ValueError(f"Duplicate known price key: {key}")
-        urls = _normalize_checked_urls(row.get("urls_checked"), key)
-        # Keep `verified_at` validation even though runtime logic does not
-        # currently consume it; this prevents malformed metadata drift.
-        _normalize_verified_at(row.get("verified_at"), key)
-        prices[key] = (urls, _normalize_computed_price(row.get("computed_price"), key))
-    return prices
+        with deps.timing.time_stage("read_file"):
+            raw_text = path.read_text(encoding="utf-8")
+
+        with deps.timing.time_stage("parse_json"):
+            rows = json.loads(raw_text)
+
+        with deps.timing.time_stage("normalize_rows"):
+            prices: dict[KnownPriceKey, KnownPriceValue] = {}
+            for row in rows:
+                key = _key_for_row(row)
+                if key in prices:
+                    raise ValueError(f"Duplicate known price key: {key}")
+                urls = _normalize_checked_urls(row.get("urls_checked"), key)
+                # Keep `verified_at` validation even though runtime logic does not
+                # currently consume it; this prevents malformed metadata drift.
+                _normalize_verified_at(row.get("verified_at"), key)
+                prices[key] = (urls, _normalize_computed_price(row.get("computed_price"), key))
+            return prices
+
+
+def get_known_price(key):
+    with deps.timing.time_stage("known_prices"):
+        with deps.timing.time_stage("lookup"):
+            return _load_known_prices(KNOWN_PRICES_PATH).get(key)
 
 
 def load_known_price_rows():
-    if not KNOWN_PRICES_PATH.exists():
-        return []
-    rows = json.loads(KNOWN_PRICES_PATH.read_text(encoding="utf-8"))
-    if not isinstance(rows, list):
-        raise ValueError(f"Known prices file must be a list: {KNOWN_PRICES_PATH}")
-    return rows
+    with deps.timing.time_stage("known_prices"):
+        with deps.timing.time_stage("load_rows"):
+            if not KNOWN_PRICES_PATH.exists():
+                return []
+            rows = json.loads(KNOWN_PRICES_PATH.read_text(encoding="utf-8"))
+            if not isinstance(rows, list):
+                raise ValueError(f"Known prices file must be a list: {KNOWN_PRICES_PATH}")
+            return rows
 
 
 def save_known_price_rows(rows):
-    global KNOWN_PRICES
-    KNOWN_PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    KNOWN_PRICES_PATH.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-    KNOWN_PRICES = _load_known_prices(KNOWN_PRICES_PATH)
-
-
-KNOWN_PRICES_PATH = Path(deps.config.known_prices_data_path)
-# Key: (seller, model, storage, condition)
-# Value: (checked_query_urls, best_price)
-KNOWN_PRICES: dict[KnownPriceKey, KnownPriceValue] = _load_known_prices(KNOWN_PRICES_PATH)
+    with deps.timing.time_stage("known_prices"):
+        with deps.timing.time_stage("save_rows"):
+            KNOWN_PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
+            KNOWN_PRICES_PATH.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")

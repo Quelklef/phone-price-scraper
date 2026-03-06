@@ -4,7 +4,7 @@ from itertools import product
 import deps
 from core import Condition, Model, Storage
 import glyphs
-from known_prices import KNOWN_PRICES
+import known_prices
 import pretty_log
 from sellers.registry import SELLERS
 
@@ -108,7 +108,7 @@ def _english_list(items):
 
 def validate_known_price_row(seller, model, storage, condition, lowest_price, query_urls):
     key = (seller, model, storage, condition)
-    expected = KNOWN_PRICES.get(key)
+    expected = known_prices.get_known_price(key)
     if expected is None:
         return False, None
 
