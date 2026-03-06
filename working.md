@@ -1,5 +1,18 @@
 
-- create_deferred_session() is iffy because the returned value is overly, weirdly complected with the original value. Can we do something better? I think .create_deferred_session() should return an object with a reference to the original http cache, but where cache writes are stored in-memory only. Then there should be a .commit_to(other: HttpCache) method which commits. during a deferred session, the deferred and original sessions should be almost entirely independent, with the exception that they both point to the same on-disk cache. Hence, reads and writes from the original session will appear in the deferred session. Also, I guess it should be called .create_write_deferred_session()
+- Readme changes:
+
+  - Remove "Example known-good query"
+  - Update CLI flags
+  - Update sec 1 to make clear that the listed models and storages are just the default ranges, and that other ranges can be selected in the CLI
+  - Recommend over-HTTP `nix run` first, and then local `nix run`, and then devshell for development only. Show flags with the over-HTTP `nix run` call example.
+  - Add sample output by running `run-app -o` and turning the output CSV into an abbreviated markdown table. Include these rows: model, storage, condition, seller, minimum price (link to listing)
+  - Add a new "Gotchas" section and note that multi-variant listings (eg, "Pixel 7 / 7 Pro 128GB") are excluded for the sake of simplicity.
+
+  Add a note in AGENTS.md to keep the README up-to-date when code changes are amde.
+
+- For the post-table price mismatch warning,
+  - Show immediately after the "Price is verified ..." logline.
+  - Show "scraper" instead of "scrapers" if it's just one
 
 - Add tests to timing.py.
 
@@ -15,9 +28,11 @@
   6. _prune_redundant_rows() removes exactly those rows with duplicate paths (propery test)
 
 - Repeatedly do the following until there is no more to do:
+
   - Find something that can be simplified, and make it simpler
   - Find something that should be factored out, and do so
   - Find something that should be made more readable/clear, and do so
   - Find something that deserves a comment, and give it one
   - Find something that can be optimized without architectural changes, and do it
 
+  Then, verify we still have no mismatches and commit.
