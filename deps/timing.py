@@ -200,37 +200,42 @@ def _is_subsequence(shorter: tuple[str, ...], longer: tuple[str, ...]):
 
 
 def _prune_redundant_rows(rows):
-    # If two rows come from the same timed event IDs, they are timing the same
-    # underlying work. In that case, keep just one row.
+    # Rows with identical event IDs describe the same underlying timed events.
+    # Keep one representative row per event-ID set.
     #
-    # Example:
-    # - "html.parse"
-    # - "program -> seller.amazon -> html.parse"
-    # If both rows contain the same event IDs, both rows say the same thing in
-    # practice; one is just wordier.
-    #
-    # We keep the shorter label when possible so the table stays readable.
-    # The actual timing values are not lost because both rows came from the
-    # same exact events.
-    keep = [True] * len(rows)
-    for i, row_i in enumerate(rows):
-        if not keep[i]:
-            continue
-        path_i = row_i[0]
-        events_i = row_i[5]
-        for j, row_j in enumerate(rows):
-            if i == j or not keep[j]:
-                continue
-            path_j = row_j[0]
-            events_j = row_j[5]
-            if events_i != events_j:
-                continue
-            if len(path_i) < len(path_j) and _is_subsequence(path_i, path_j):
-                keep[j] = False
-            elif len(path_j) < len(path_i) and _is_subsequence(path_j, path_i):
-                keep[i] = False
-                break
-            elif len(path_i) == len(path_j) and path_j < path_i:
-                keep[i] = False
-                break
-    return [row for idx, row in enumerate(rows) if keep[idx]]
+    # Selection policy:
+    # - preserve beginning context when possible
+    # - then prefer dropping trailing specificity
+    # This keeps labels like "program -> html.parse" over both
+    # "html.parse" (drops context) and
+    # "program -> seller.amazon -> html.parse" (too specific).
+    grouped: dict[tuple[int, ...], list[tuple]] = {}
+    for row in rows:
+        grouped.setdefault(tuple(sorted(row[5])), []).append(row)
+
+    kept = []
+    for group_rows in grouped.values():
+        anchor = max((row[0] for row in group_rows), key=lambda p: (len(p), p))
+
+        def _subseq_indices(path):
+            idxs = []
+            start = 0
+            for part in path:
+                found = None
+                for i in range(start, len(anchor)):
+                    if anchor[i] == part:
+                        found = i
+                        break
+                if found is None:
+                    return None
+                idxs.append(found)
+                start = found + 1
+            return tuple(idxs)
+
+        def _path_score(path):
+            idxs = _subseq_indices(path)
+            start_rank = idxs[0] if idxs is not None else len(anchor) + 1
+            return (start_rank, len(path), path)
+
+        kept.append(min(group_rows, key=lambda row: _path_score(row[0])))
+    return kept
