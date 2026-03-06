@@ -40,18 +40,6 @@ CONDITION_FILTER_NOTE = (
 )
 
 
-class _ColorsAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        enabled = option_string in {"-c", "--colors"}
-        setattr(namespace, self.dest, enabled)
-
-
-class _UnicodeAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        enabled = option_string in {"-u", "--unicode"}
-        setattr(namespace, self.dest, enabled)
-
-
 def _parse_csv(raw_value, field_name):
     raw_items = [item.strip() for item in raw_value.split(",")]
     if any(not item for item in raw_items):
@@ -146,6 +134,35 @@ def _parse_percentage_string(raw_value):
     return number / 100.0
 
 
+def _parse_bool(raw_value):
+    if isinstance(raw_value, bool):
+        return raw_value
+    text = str(raw_value).strip().lower()
+    if text in {"1", "true", "t", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "f", "no", "n", "off"}:
+        return False
+    raise argparse.ArgumentTypeError(
+        f"Invalid boolean value: {raw_value!r}. Use true/false."
+    )
+
+
+class _UnicodeAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None:
+            setattr(namespace, self.dest, option_string != "-U")
+            return
+        setattr(namespace, self.dest, _parse_bool(values))
+
+
+class _ColorsAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None:
+            setattr(namespace, self.dest, option_string != "-C")
+            return
+        setattr(namespace, self.dest, _parse_bool(values))
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         add_help=False,
@@ -223,23 +240,29 @@ def build_parser():
         "-u",
         "-U",
         "--unicode",
-        "--no-unicode",
         dest="unicode",
-        nargs=0,
+        nargs="?",
         action=_UnicodeAction,
         default=True,
-        help="Unicode output toggle (-u/--unicode default, -U/--no-unicode).",
+        metavar="BOOL",
+        help=(
+            "Unicode output toggle. Accepts true/false "
+            "(default: true). -u sets true, -U sets false."
+        ),
     )
     display_group.add_argument(
         "-c",
         "-C",
         "--colors",
-        "--no-colors",
         dest="colors",
-        nargs=0,
+        nargs="?",
         action=_ColorsAction,
         default=True,
-        help="Color output toggle (-c/--colors default, -C/--no-colors).",
+        metavar="BOOL",
+        help=(
+            "Color output toggle. Accepts true/false "
+            "(default: true). -c sets true, -C sets false."
+        ),
     )
     other_group = parser.add_argument_group("other options")
     other_group.add_argument(
@@ -258,15 +281,12 @@ def build_parser():
     other_group.add_argument(
         "--profile-truncate",
         dest="profile_truncate",
-        action="store_true",
+        nargs="?",
+        const=True,
+        type=_parse_bool,
+        metavar="BOOL",
         default=True,
-        help="Enable timing table truncation (default).",
-    )
-    other_group.add_argument(
-        "--profile-no-truncate",
-        dest="profile_truncate",
-        action="store_false",
-        help="Disable timing table truncation.",
+        help="Truncate timing table rows. Accepts true/false (default: true).",
     )
     display_group.add_argument(
         "--table-direction",
