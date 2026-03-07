@@ -27,7 +27,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from itertools import combinations
 import time
-from typing import NamedTuple, TypedDict
+from typing import Hashable, NamedTuple, Protocol, TypeVar, TypedDict
 
 import glyphs
 
@@ -249,13 +249,21 @@ def _iter_path_projections(path: Path) -> tuple[Path, ...]:
     return cached
 
 
-def _prune_redundant_rows(rows: list[Row]) -> list[Row]:
-    # Rows with identical event IDs describe the same underlying timed events.
-    # Within each event-ID set:
+class _RowLike(Protocol):
+    path: Path
+    event_ids: Hashable
+
+
+RowT = TypeVar("RowT", bound=_RowLike)
+
+
+def _prune_redundant_rows(rows: list[RowT]) -> list[RowT]:
+    # Rows with the same event ID set key describe the same underlying timed
+    # events. Within each such group:
     # 1) Repeatedly: if A is a prefix of B, drop B.
     # 2) After (1) reaches a fixed point, repeatedly: if A is a strict
     #    supersequence of B, drop B.
-    grouped: dict[frozenset[int], list[Row]] = {}
+    grouped: dict[Hashable, list[RowT]] = {}
     for row in rows:
         grouped.setdefault(row.event_ids, []).append(row)
 
@@ -265,9 +273,9 @@ def _prune_redundant_rows(rows: list[Row]) -> list[Row]:
         it = iter(seq)
         return all(any(part == cur for cur in it) for part in subseq)
 
-    kept: list[Row] = []
+    kept: list[RowT] = []
     for group_rows in grouped.values():
-        rows_by_path: dict[Path, Row] = {row.path: row for row in group_rows}
+        rows_by_path: dict[Path, RowT] = {row.path: row for row in group_rows}
         active_paths = set(rows_by_path)
 
         # Phase 1: strict prefix elimination to fixed point.
