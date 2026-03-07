@@ -31,6 +31,8 @@ from typing import NamedTuple, TypedDict
 
 import glyphs
 
+Path = tuple[str, ...]
+
 
 @dataclass
 class _StageStat:
@@ -40,14 +42,14 @@ class _StageStat:
     event_ids: set[int] = field(default_factory=set)
 
 
-_STATS: dict[tuple[str, ...], _StageStat] = {}
+_STATS: dict[Path, _StageStat] = {}
 _PATH_STACK: list[str] = []
 _NEXT_EVENT_ID = 1
-_PATH_PROJECTIONS_CACHE: dict[tuple[str, ...], tuple[tuple[str, ...], ...]] = {}
+_PATH_PROJECTIONS_CACHE: dict[Path, tuple[Path, ...]] = {}
 
 
 class TimingRow(NamedTuple):
-    path: tuple[str, ...]
+    path: Path
     count: int
     total_s: float
     avg_s: float
@@ -71,7 +73,7 @@ def _next_event_id() -> int:
     return event_id
 
 
-def _record(path: tuple[str, ...], elapsed_s: float, event_id: int) -> None:
+def _record(path: Path, elapsed_s: float, event_id: int) -> None:
     stat = _STATS.setdefault(path, _StageStat())
     stat.event_ids.add(event_id)
     stat.count += 1
@@ -88,7 +90,7 @@ def _normalize_stage(stage: object) -> str:
 
 
 class StageTimer:
-    def __init__(self, paths: tuple[tuple[str, ...], ...], *, pop_count: int):
+    def __init__(self, paths: tuple[Path, ...], *, pop_count: int):
         self._paths = paths
         self._pop_count = pop_count
         self._start = time.perf_counter()
@@ -100,7 +102,7 @@ class StageTimer:
         self._ended = True
         elapsed = time.perf_counter() - self._start
         event_id = _next_event_id()
-        all_projections: set[tuple[str, ...]] = set()
+        all_projections: set[Path] = set()
         for path in self._paths:
             all_projections.update(_iter_path_projections(path))
         for projection in all_projections:
@@ -112,7 +114,7 @@ def stage_start(*stages: str) -> StageTimer:
     if not stages:
         raise ValueError("stage_start requires at least one stage")
     norm_stages = tuple(_normalize_stage(stage) for stage in stages)
-    prefix_paths: list[tuple[str, ...]] = []
+    prefix_paths: list[Path] = []
     for stage in norm_stages:
         _PATH_STACK.append(stage)
         prefix_paths.append(tuple(_PATH_STACK))
@@ -213,7 +215,7 @@ def render_summary_with_stats(
     return lines, summary
 
 
-def _iter_path_projections(path: tuple[str, ...]) -> tuple[tuple[str, ...], ...]:
+def _iter_path_projections(path: Path) -> tuple[Path, ...]:
     cache_key = path
     cached = _PATH_PROJECTIONS_CACHE.get(cache_key)
     if cached is None:
@@ -257,7 +259,7 @@ def _prune_redundant_rows(rows: list[Row]) -> list[Row]:
     for row in rows:
         grouped.setdefault(row.event_ids, []).append(row)
 
-    def _is_subsequence(subseq: tuple[str, ...], seq: tuple[str, ...]) -> bool:
+    def _is_subsequence(subseq: Path, seq: Path) -> bool:
         if len(subseq) > len(seq):
             return False
         it = iter(seq)
@@ -265,7 +267,7 @@ def _prune_redundant_rows(rows: list[Row]) -> list[Row]:
 
     kept: list[Row] = []
     for group_rows in grouped.values():
-        rows_by_path: dict[tuple[str, ...], Row] = {row.path: row for row in group_rows}
+        rows_by_path: dict[Path, Row] = {row.path: row for row in group_rows}
         active_paths = set(rows_by_path)
 
         # Phase 1: strict prefix elimination to fixed point.
