@@ -234,7 +234,7 @@ def style_cell(header, value):
         return _paint(value, BOLD, BLUE)
     if header == "Seller":
         return _paint(value, BOLD, CYAN)
-    if header == "Price" and stripped != "N/A":
+    if header.startswith("Price") and stripped != "N/A":
         return _paint(value, GREEN)
     if header == "$/Year" and stripped != "N/A":
         return _paint(value, BOLD, MAGENTA)

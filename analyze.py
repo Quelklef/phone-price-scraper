@@ -63,18 +63,21 @@ def print_results_table(results, *, table_direction):
     rows = [_result_to_row(row) for row in _sort_results_by_price(results)]
     if table_direction == "bottom-to-top":
         rows = list(reversed(rows))
+    display_headers = list(TABLE_HEADERS)
+    price_arrow = "↓" if table_direction == "bottom-to-top" else "↑"
+    display_headers[4] = f"Price {price_arrow}"
 
-    widths = [max(len(header), *(len(row[i]) for row in rows)) for i, header in enumerate(TABLE_HEADERS)]
+    widths = [max(len(header), *(len(row[i]) for row in rows)) for i, header in enumerate(display_headers)]
 
     def fmt(row):
         styled_cells = [
-            pretty_log.style_cell(TABLE_HEADERS[i], cell.ljust(widths[i])) for i, cell in enumerate(row)
+            pretty_log.style_cell(display_headers[i], cell.ljust(widths[i])) for i, cell in enumerate(row)
         ]
         return f" {glyphs.V} ".join(styled_cells)
 
     line = f"{glyphs.H_HEAVY}{glyphs.X_HEAVY}{glyphs.H_HEAVY}".join(glyphs.H_HEAVY * w for w in widths)
     if table_direction == "top-to-bottom":
-        deps.printer.print(fmt(TABLE_HEADERS))
+        deps.printer.print(fmt(display_headers))
         deps.printer.print(line)
         for row in rows:
             deps.printer.print(fmt(row))
@@ -83,7 +86,7 @@ def print_results_table(results, *, table_direction):
     for row in rows:
         deps.printer.print(fmt(row))
     deps.printer.print(line)
-    deps.printer.print(fmt(TABLE_HEADERS))
+    deps.printer.print(fmt(display_headers))
 
 
 def write_results_csv(results, output_path):
