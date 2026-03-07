@@ -93,6 +93,7 @@ class HttpCache:
         self._entries = self._load_entries()
         self._cache_index = {entry["url"]: entry["resultKey"] for entry in self._entries}
         self._entry_by_url = {entry["url"]: entry for entry in self._entries}
+        self._touched_result_keys = set()
 
     def _host_config(self, url):
         host = urlparse(url).netloc.lower()
@@ -181,6 +182,7 @@ class HttpCache:
         result_path = self._results_dir / result_key
         with timing.time_stage("cache.http.write_result"):
             result_path.write_text(text, encoding="utf-8")
+        self._touched_result_keys.add(result_key)
 
         with self._write_lock:
             with timing.time_stage("cache.http.write_index"):
@@ -231,6 +233,7 @@ class HttpCache:
         result_key = self._cache_index.get(url)
         if result_key is None:
             return None
+        self._touched_result_keys.add(result_key)
         entry = self._entry_for_url(url)
         path = self._results_dir / result_key
         try:
@@ -243,6 +246,44 @@ class HttpCache:
         except FileNotFoundError:
             self._remove_entry_for_url(url)
             return None
+
+    def prune_disk(self):
+        # Keep only entries touched during this process runtime.
+        # "Touched" means a cache entry key was either read (cache hit) or
+        # written (cache miss/persist). Any indexed entry not touched is removed
+        # from entries.json and its result file is deleted from disk.
+        touched = set(self._touched_result_keys)
+        with self._write_lock:
+            original_entries = list(self._entries)
+            kept_entries = []
+            pruned_keys = set()
+            for entry in original_entries:
+                result_key = entry["resultKey"]
+                if result_key in touched:
+                    kept_entries.append(entry)
+                else:
+                    pruned_keys.add(result_key)
+
+            self._entries = kept_entries
+            self._cache_index = {entry["url"]: entry["resultKey"] for entry in self._entries}
+            self._entry_by_url = {entry["url"]: entry for entry in self._entries}
+            self._save_entries()
+
+        deleted_files = 0
+        for result_key in pruned_keys:
+            path = self._results_dir / result_key
+            try:
+                path.unlink()
+                deleted_files += 1
+            except FileNotFoundError:
+                pass
+
+        return {
+            "touched_count": len(touched),
+            "kept_entries": len(self._entries),
+            "pruned_entries": len(original_entries) - len(self._entries),
+            "deleted_files": deleted_files,
+        }
 
     def _fetch_locked(self, url):
         import deps

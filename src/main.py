@@ -47,6 +47,7 @@ FLAG_OUTPUT_CSV = cli_flags.require_flag("output_csv")
 FLAG_UNICODE = cli_flags.require_flag("unicode")
 FLAG_COLORS = cli_flags.require_flag("colors")
 FLAG_PROFILE_PERFORMANCE = cli_flags.require_flag("profile_performance")
+FLAG_PRUNE_HTTP_CACHE = cli_flags.require_flag("prune_http_cache")
 FLAG_PROFILE_TRUNCATE_THRESHOLD = cli_flags.require_flag("profile_truncate_threshold")
 FLAG_PROFILE_TRUNCATE = cli_flags.require_flag("profile_truncate")
 FLAG_TABLE_DIRECTION = cli_flags.require_flag("table_direction")
@@ -388,6 +389,15 @@ def build_parser():
         default=True,
         help="Truncate timing table rows. Accepts true/false (default: true).",
     )
+    other_group.add_argument(
+        FLAG_PRUNE_HTTP_CACHE.long,
+        action="store_true",
+        help=(
+            "After the run completes, prune HTTP cache entries down to only entries touched during that run. "
+            "Running a real scrape is necessary because URL access can be dynamic "
+            "(for example, scrapers may follow links to detail pages), so the actual URL set is discovered at runtime."
+        ),
+    )
     display_group.add_argument(
         FLAG_TABLE_DIRECTION.long,
         choices=("top-to-bottom", "bottom-to-top"),
@@ -444,7 +454,7 @@ def main():
     import pretty_log
     from analyze import run
 
-    return run(
+    results = run(
         profile_performance=args.profile_performance,
         profile_truncate=args.profile_truncate,
         profile_truncate_threshold=args.profile_truncate_threshold,
@@ -455,6 +465,16 @@ def main():
         search_storages=args.search_storages,
         search_conditions=args.search_conditions,
     )
+    if args.prune_http_cache:
+        summary = deps.http_cache.prune_disk()
+        pretty_log.spacer()
+        deps.printer.print(
+            "HTTP cache prune completed: "
+            f"Kept {summary['kept_entries']} entry records, "
+            f"deleted {summary['pruned_entries']}. "
+            f"Deleted {summary['deleted_files']} on-disk files."
+        )
+    return results
 
 
 if __name__ == "__main__":

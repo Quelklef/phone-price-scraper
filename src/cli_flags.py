@@ -43,6 +43,7 @@ _FLAGS: dict[str, FlagNames] = {
     "unicode": FlagNames("--unicode", ("-u", "-U")),
     "colors": FlagNames("--colors", ("-c", "-C")),
     "profile_performance": FlagNames("--profile-performance", ("-p",)),
+    "prune_http_cache": FlagNames("--prune-http-cache"),
     "profile_truncate_threshold": FlagNames("--profile-truncate-threshold"),
     "profile_truncate": FlagNames("--profile-truncate"),
     "table_direction": FlagNames("--table-direction"),
