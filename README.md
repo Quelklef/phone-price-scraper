@@ -22,7 +22,7 @@ Attributes searched:
 You can run it against sample cached HTTP data with:
 
 ```bash
-nix run github:quelklef/phone-price-scraper#sample
+nix run github:quelklef/phone-price-scraper?ref=sample-data
 ```
 
 Or against live data with the default app:
