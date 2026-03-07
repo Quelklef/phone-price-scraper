@@ -33,6 +33,7 @@ class FlagNames:
 
 _FLAGS: dict[str, FlagNames] = {
     "help": FlagNames("--help", ("-h",)),
+    "hints": FlagNames("--hints"),
     "data_dir": FlagNames("--data-dir", ("-d",)),
     "search_sellers": FlagNames("--search-sellers"),
     "search_models": FlagNames("--search-models"),

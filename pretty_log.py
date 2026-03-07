@@ -11,6 +11,7 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 BLUE = "\033[34m"
 MAGENTA = "\033[35m"
+LIGHT_MAGENTA = "\033[95m"
 CYAN = "\033[36m"
 WHITE = "\033[37m"
 SELLER_W = 10
@@ -18,6 +19,8 @@ MODEL_W = 25
 _VERIFIED_MARKER = "(v)"
 _UNVERIFIED_MARKER = " " * len(_VERIFIED_MARKER)
 _KV_LABEL_W = 11
+_HINT_TEXT_STYLES = (DIM, ITALIC, WHITE)
+_HINT_FLAG_STYLES = (DIM, ITALIC, LIGHT_MAGENTA)
 
 
 def _emit(text):
@@ -30,6 +33,65 @@ def _paint(text, *styles):
 
 def _icon(unicode_text):
     return unicode_text
+
+
+def _hints_enabled():
+    return bool(getattr(deps.config, "hints_enabled", True))
+
+
+def _hint_suffix(verb, flag_text):
+    left = _paint(f" ({verb} ", *_HINT_TEXT_STYLES)
+    flag = _paint(flag_text, *_HINT_FLAG_STYLES)
+    right = _paint(")", *_HINT_TEXT_STYLES)
+    return f"{left}{flag}{right}"
+
+
+def with_hint(text, *, verb, flag_text):
+    if _hints_enabled():
+        _emit(f"{_paint(text, *_HINT_TEXT_STYLES)}{_hint_suffix(verb, flag_text)}")
+        return True
+    _emit(text)
+    return True
+
+
+def with_hint_suffix(text, *, verb, flag_text):
+    if _hints_enabled():
+        _emit(f"{text}{_hint_suffix(verb, flag_text)}")
+        return True
+    _emit(text)
+    return False
+
+
+def hint(text, *, verb, flag_text):
+    if not _hints_enabled():
+        return False
+    _emit(f"{_paint(text, *_HINT_TEXT_STYLES)}{_hint_suffix(verb, flag_text)}")
+    return True
+
+
+def hint_block(text, *, verb, flag_text):
+    if not _hints_enabled():
+        return False
+    _emit("")
+    _emit(f"{_paint(text, *_HINT_TEXT_STYLES)}{_hint_suffix(verb, flag_text)}")
+    return True
+
+
+def with_detail_hint(text, *, detail, verb, flag_text):
+    plain = f"{text} ({detail}, {verb} {flag_text})"
+    if not _hints_enabled():
+        _emit(plain)
+        return True
+    left = f"{text} ({detail}, "
+    styled_verb = _paint(f"{verb} ", *_HINT_TEXT_STYLES)
+    styled_flag = _paint(flag_text, *_HINT_FLAG_STYLES)
+    right = ")"
+    _emit(f"{left}{styled_verb}{styled_flag}{right}")
+    return True
+
+
+def spacer():
+    _emit("")
 
 
 def _result_status(ok):

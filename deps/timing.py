@@ -110,17 +110,29 @@ def time_stage(*stages: str):
 
 
 def render_summary(*, truncate=True, truncate_threshold=0.05):
+    lines, _summary = render_summary_with_stats(
+        truncate=truncate,
+        truncate_threshold=truncate_threshold,
+    )
+    return lines
+
+
+def render_summary_with_stats(*, truncate=True, truncate_threshold=0.05):
     rows = [
         (path, stat.count, stat.total_s, (stat.total_s / stat.count) if stat.count else 0.0, stat.max_s, stat.event_ids)
         for path, stat in _STATS.items()
     ]
     if not rows:
-        return ["(no timing data)"]
+        return ["(no timing data)"], {
+            "truncated_count": 0,
+            "threshold_s": 0.0,
+            "top_total_s": 0.0,
+        }
 
     rows = _prune_redundant_rows(rows)
     rows.sort(key=lambda row: row[2], reverse=True)
+    top_total = next((row[2] for row in rows if row[0] == ("top",)), rows[0][2])
     if truncate:
-        top_total = next((row[2] for row in rows if row[0] == ("top",)), rows[0][2])
         threshold_s = top_total * truncate_threshold
         kept_rows = [row for row in rows if row[2] >= threshold_s]
         truncated_count = len(rows) - len(kept_rows)
@@ -163,9 +175,12 @@ def render_summary(*, truncate=True, truncate_threshold=0.05):
             f"{avg_s:7.3f}".rjust(avg_w),
             f"{max_s:7.3f}".rjust(max_w),
         ]))
-    if truncated_count:
-        lines.append(f"{truncated_count} rows {glyphs.LESS_THAN}{threshold_s:.3f}s removed")
-    return lines
+    summary = {
+        "truncated_count": truncated_count,
+        "threshold_s": threshold_s,
+        "top_total_s": top_total,
+    }
+    return lines, summary
 
 
 def _iter_path_projections(path: tuple[str, ...]):

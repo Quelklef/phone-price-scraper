@@ -41,6 +41,7 @@ CONDITION_FILTER_NOTE = (
 )
 
 FLAG_HELP = cli_flags.require_flag("help")
+FLAG_HINTS = cli_flags.require_flag("hints")
 FLAG_DATA_DIR = cli_flags.require_flag("data_dir")
 FLAG_SEARCH_SELLERS = cli_flags.require_flag("search_sellers")
 FLAG_SEARCH_MODELS = cli_flags.require_flag("search_models")
@@ -270,6 +271,15 @@ def build_parser():
         action="help",
         help="Show this help message and exit.",
     )
+    help_group.add_argument(
+        FLAG_HINTS.long,
+        nargs="?",
+        const=True,
+        type=_parse_bool,
+        default=True,
+        metavar="BOOL",
+        help="Show runtime config hints. Accepts true/false (default: true).",
+    )
     general_group = parser.add_argument_group("general options")
     general_group.add_argument(
         FLAG_DATA_DIR.short[0],
@@ -427,14 +437,15 @@ def parse_args():
 def main():
     _parser, args = parse_args()
     data_dir = _choose_data_dir(args)
-    print(f"Using data directory {data_dir.resolve()}\n")
     deps.init_deps(
         profile_performance=args.profile_performance,
         unicode=args.unicode,
         colors=args.colors,
+        hints_enabled=args.hints,
         known_prices_data_path=data_dir / "known-prices.json",
         http_get_data_dir=data_dir / "http_get",
     )
+    import pretty_log
     from analyze import run
 
     return run(

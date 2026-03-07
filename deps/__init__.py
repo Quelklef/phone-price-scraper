@@ -36,6 +36,7 @@ def init_deps(
     profile_performance: bool,
     unicode: bool,
     colors: bool,
+    hints_enabled: bool,
     known_prices_data_path: Path,
     http_get_data_dir: Path,
 ):
@@ -51,6 +52,7 @@ def init_deps(
     config = _config_module.Config(
         unicode=unicode,
         colors=colors,
+        hints_enabled=hints_enabled,
         known_prices_data_path=known_prices_data_path,
         http_get_data_dir=http_get_data_dir,
     )

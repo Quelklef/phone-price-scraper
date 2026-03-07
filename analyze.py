@@ -1,6 +1,8 @@
 import csv
 from itertools import product
+from pathlib import Path
 
+import cli_flags
 import deps
 from core import Condition, Model, Storage
 import glyphs
@@ -9,6 +11,18 @@ import pretty_log
 from sellers.registry import SELLERS
 
 TABLE_HEADERS = ["Seller", "Model", "Condition", "Storage", "Price", "Listing URL"]
+FLAG_SEARCH_SELLERS = cli_flags.require_flag("search_sellers")
+FLAG_SEARCH_MODELS = cli_flags.require_flag("search_models")
+FLAG_SEARCH_STORAGES = cli_flags.require_flag("search_storages")
+FLAG_SEARCH_CONDITIONS = cli_flags.require_flag("search_conditions")
+FLAG_OUTPUT_CSV = cli_flags.require_flag("output_csv")
+FLAG_DATA_DIR = cli_flags.require_flag("data_dir")
+FLAG_UNICODE = cli_flags.require_flag("unicode")
+FLAG_COLORS = cli_flags.require_flag("colors")
+FLAG_PROFILE_PERFORMANCE = cli_flags.require_flag("profile_performance")
+FLAG_PROFILE_TRUNCATE = cli_flags.require_flag("profile_truncate")
+FLAG_PROFILE_TRUNCATE_THRESHOLD = cli_flags.require_flag("profile_truncate_threshold")
+FLAG_TABLE_DIRECTION = cli_flags.require_flag("table_direction")
 
 
 def _iter_supported_model_storage_pairs(
@@ -58,7 +72,6 @@ def print_results_table(results, *, table_direction):
         ]
         return f" {glyphs.V} ".join(styled_cells)
 
-    pretty_log.table_header()
     line = f"{glyphs.H_HEAVY}{glyphs.X_HEAVY}{glyphs.H_HEAVY}".join(glyphs.H_HEAVY * w for w in widths)
     if table_direction == "top-to-bottom":
         deps.printer.print(fmt(TABLE_HEADERS))
@@ -104,6 +117,10 @@ def _english_list(items):
     if len(values) == 2:
         return f"{values[0]} and {values[1]}"
     return f"{', '.join(values[:-1])}, and {values[-1]}"
+
+
+def _csv_text(values):
+    return ", ".join(str(value) for value in values)
 
 
 def validate_known_price_row(seller, model, storage, condition, lowest_price, query_urls):
@@ -176,8 +193,59 @@ def run(
         known_price_xref_by_seller = {seller.key: 0 for seller in active_sellers}
         mismatch_count = 0
         mismatch_sellers = set()
+        deps.printer.print()
         pretty_log.banner()
-        pretty_log.section("Scraping listings")
+        pretty_log.hint_block(
+            f"Using data directory {deps.config.http_get_data_dir.parent.resolve()}",
+            verb="change with",
+            flag_text=f"{FLAG_DATA_DIR.long}=PATH",
+        )
+        pretty_log.hint(
+            f"Unicode output: {'on' if deps.config.unicode else 'off'}",
+            verb="change with",
+            flag_text=f"{FLAG_UNICODE.long}=BOOL",
+        )
+        pretty_log.hint(
+            f"Color output: {'on' if deps.config.colors else 'off'}",
+            verb="change with",
+            flag_text=f"{FLAG_COLORS.long}=BOOL",
+        )
+        pretty_log.section("Data Scrape")
+        search_hints_shown = False
+        search_hints_shown = (
+            pretty_log.hint(
+            f"Searching sellers {_csv_text(seller.key for seller in active_sellers)}",
+            verb="change with",
+            flag_text=f"{FLAG_SEARCH_SELLERS.long}=LIST",
+            )
+            or search_hints_shown
+        )
+        search_hints_shown = (
+            pretty_log.hint(
+            f"Searching models {_csv_text(search_models or [])}",
+            verb="change with",
+            flag_text=f"{FLAG_SEARCH_MODELS.long}=LIST",
+            )
+            or search_hints_shown
+        )
+        search_hints_shown = (
+            pretty_log.hint(
+            f"Searching storages {_csv_text(f'{storage}gb' for storage in search_storages or [])}",
+            verb="change with",
+            flag_text=f"{FLAG_SEARCH_STORAGES.long}=LIST",
+            )
+            or search_hints_shown
+        )
+        search_hints_shown = (
+            pretty_log.hint(
+            f"Searching conditions {_csv_text(search_conditions or ['good', 'best'])}",
+            verb="change with",
+            flag_text=f"{FLAG_SEARCH_CONDITIONS.long}=LIST",
+            )
+            or search_hints_shown
+        )
+        if search_hints_shown:
+            pretty_log.spacer()
 
         for (model, storage), condition, seller in product(
             _iter_supported_model_storage_pairs(
@@ -231,7 +299,14 @@ def run(
                 mismatch_count += 1
                 mismatch_sellers.add(seller_name)
                 pretty_log.warning_loud(f"WARNING: {mismatch_message}")
+        pretty_log.section("Pricing Table")
         print_results_table(results, table_direction=table_direction)
+        pretty_log.known_price_summary(known_price_xref_count, len(results), known_price_xref_by_seller)
+        table_hint_shown = pretty_log.hint_block(
+            f"Table displayed in {table_direction} direction",
+            verb="change with",
+            flag_text=f"{FLAG_TABLE_DIRECTION.long}=top-to-bottom|bottom-to-top",
+        )
         if mismatch_count > 0:
             seller_text = _english_list(sorted(mismatch_sellers))
             deps.printer.print()
@@ -241,15 +316,58 @@ def run(
             )
         if output_csv_path:
             write_results_csv(results, output_csv_path)
-            deps.printer.print(f"\nCSV written: {output_csv_path}")
-        pretty_log.known_price_summary(known_price_xref_count, len(results), known_price_xref_by_seller)
+            resolved_csv = Path(output_csv_path).resolve()
+            if table_hint_shown:
+                pretty_log.spacer()
+            deps.printer.print(f"CSV written to {resolved_csv} ({len(results)} rows)")
+        else:
+            if table_hint_shown:
+                pretty_log.hint_block(
+                    "No CSV generated",
+                    verb="generate with",
+                    flag_text=f"{FLAG_OUTPUT_CSV.long}=PATH",
+                )
+            else:
+                pretty_log.hint(
+                    "No CSV generated",
+                    verb="generate with",
+                    flag_text=f"{FLAG_OUTPUT_CSV.long}=PATH",
+                )
 
     if profile_performance:
         # Print timing after the top stage closes so "top" is finalized.
-        pretty_log.section("Timing")
-        for line in deps.timing.render_summary(
+        pretty_log.section("Performance Profile")
+        lines, summary = deps.timing.render_summary_with_stats(
             truncate=profile_truncate,
             truncate_threshold=profile_truncate_threshold,
-        ):
+        )
+        for line in lines:
             deps.printer.print(line)
+        if profile_truncate:
+            pretty_log.spacer()
+            pretty_log.with_hint_suffix(
+                f"{summary['truncated_count']} profile rows removed",
+                verb="disable with",
+                flag_text=f"{FLAG_PROFILE_TRUNCATE.long}=false",
+            )
+            threshold_pct = 0.0 if summary["top_total_s"] == 0 else (summary["threshold_s"] / summary["top_total_s"]) * 100.0
+            pretty_log.with_detail_hint(
+                f"Removal threshold {summary['threshold_s']:.3f}s",
+                detail=f"{threshold_pct:.1f}% of total runtime",
+                verb="change with",
+                flag_text=f"{FLAG_PROFILE_TRUNCATE_THRESHOLD.long}=PCT",
+            )
+        else:
+            pretty_log.spacer()
+            pretty_log.with_hint_suffix(
+                "No profile rows removed",
+                verb="enable with",
+                flag_text=f"{FLAG_PROFILE_TRUNCATE.long}=true",
+            )
+    else:
+        pretty_log.hint_block(
+            "Performance table omitted",
+            verb="show with",
+            flag_text=FLAG_PROFILE_PERFORMANCE.long,
+        )
     return results

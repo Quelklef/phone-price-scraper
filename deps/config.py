@@ -8,3 +8,4 @@ class Config:
     http_get_data_dir: Path
     unicode: bool = True
     colors: bool = True
+    hints_enabled: bool = True
