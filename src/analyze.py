@@ -24,15 +24,6 @@ FLAG_PROFILE_TRUNCATE = cli_flags.require_flag("profile_truncate")
 FLAG_PROFILE_TRUNCATE_THRESHOLD = cli_flags.require_flag("profile_truncate_threshold")
 FLAG_TABLE_DIRECTION = cli_flags.require_flag("table_direction")
 
-
-def _iter_supported_model_storage_pairs(
-    *,
-    search_models: list[Model],
-    search_storages: list[Storage],
-):
-    yield from product(search_models, search_storages)
-
-
 def _sort_results_by_price(results):
     # Keep "no listing" rows at the end while sorting numeric prices ascending.
     return sorted(
@@ -255,10 +246,7 @@ def run(
             pretty_log.spacer()
 
         for (model, storage), condition, seller in product(
-            _iter_supported_model_storage_pairs(
-                search_models=search_models,
-                search_storages=search_storages,
-            ),
+            product(search_models, search_storages),
             active_conditions,
             active_sellers,
         ):
