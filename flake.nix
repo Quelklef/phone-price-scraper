@@ -39,6 +39,29 @@
                   CODEX_HOME="$codex_home" npx codex
                 '';
               };
+              run-tests = {
+                description = "Run Python unittest modules found in the repo";
+                script = ''
+                  set -euo pipefail
+
+                  repo_root="$(git rev-parse --show-toplevel)"
+                  cd "$repo_root"
+
+                  test_files="$(
+                    rg --color=never -l '\bunittest\b' src --glob '*.py' \
+                      | sort -u
+                  )"
+
+                  echo "$test_files" | while IFS= read -r file; do
+                    # Normalize any prefixed line noise to a src-relative path.
+                    file="src/''${file##*src/}"
+                    # Convert src path (e.g. src/deps/timing.py) into module notation (deps.timing) for `python -m`.
+                    module="$(echo "$file" | sed -E 's#^src/##; s#\.py$##; s#/#.#g')"
+                    echo "[run-tests] python3 -m $module"
+                    PYTHONPATH=src ${lib.getExe python3} -m "$module"
+                  done
+                '';
+              };
             };
           })
         ];

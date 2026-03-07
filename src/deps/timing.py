@@ -313,3 +313,59 @@ def _prune_redundant_rows(rows: list[RowT]) -> list[RowT]:
         for path in active_paths:
             kept.append(rows_by_path[path])
     return kept
+
+
+if __name__ == "__main__":
+    import unittest
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class _TestRow:
+        path: Path
+        event_ids: frozenset[int]
+
+    def _project_then_prune(rows: list[tuple[Path, set[int]]]) -> set[Path]:
+        normalized = [_TestRow(path=path, event_ids=frozenset(event_ids)) for path, event_ids in rows]
+        projected: list[_TestRow] = []
+        for row in normalized:
+            for path in _iter_path_projections(row.path):
+                projected.append(_TestRow(path=path, event_ids=row.event_ids))
+
+        by_path: dict[Path, set[int]] = {}
+        for row in projected:
+            by_path.setdefault(row.path, set()).update(row.event_ids)
+
+        aggregated = [_TestRow(path=path, event_ids=frozenset(event_ids)) for path, event_ids in by_path.items()]
+        pruned = _prune_redundant_rows(aggregated)
+        return {row.path for row in pruned}
+
+    class TimingProjectionPruneTests(unittest.TestCase):
+        def test_single_path(self) -> None:
+            out = _project_then_prune([
+                (("a", "b"), {1}),
+            ])
+            self.assertEqual(out, {("a", "b")})
+
+        def test_single_call_path(self) -> None:
+            out = _project_then_prune([
+                (("a"), {1}),
+                (("a", "b"), {1}),
+                (("a", "b", "c"), {1}),
+            ])
+            self.assertEqual(out, {("a",), ("b",), ("c",)})
+
+        def test_call_tree(self) -> None:
+            out = _project_then_prune([
+                (("a"), {1, 2}),
+                (("a", "b"), {1, 2}),
+                (("a", "b", "x"), {1}),
+                (("a", "b", "y"), {2}),
+                (("a", "b", "y", "z"), {2}),
+            ])
+            self.assertEqual(out, {
+                ("a",), ("b",),  # events=1,2
+                ("a", "b", "x"),  # events=1
+                ("a", "b", "y"), ("a", "b", "z"),  # events=2
+            })
+
+    unittest.main()
