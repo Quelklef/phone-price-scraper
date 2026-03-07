@@ -36,10 +36,6 @@ Run all sellers and print a ranked comparison table.
 Use this when you want the current snapshot of scraped prices.
 """.strip()
 
-CONDITION_FILTER_NOTE = (
-    "Note: --search-conditions is limited to the known condition set: good,best."
-)
-
 FLAG_HELP = cli_flags.require_flag("help")
 FLAG_HINTS = cli_flags.require_flag("hints")
 FLAG_DATA_DIR = cli_flags.require_flag("data_dir")
@@ -292,7 +288,7 @@ def build_parser():
             "HTTP cache and other persisted scraper data."
         ),
     )
-    search_group = parser.add_argument_group("search scope", CONDITION_FILTER_NOTE)
+    search_group = parser.add_argument_group("search scope")
     search_group.add_argument(
         FLAG_SEARCH_SELLERS.long,
         default=None,
