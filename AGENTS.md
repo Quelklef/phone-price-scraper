@@ -3,7 +3,7 @@
 - Keep temporary/debug files inside `.tmp/` (repo-local), not `/tmp`.
 - Reason: using `.tmp/` avoids sandbox/escalation prompts and keeps scratch artifacts in the workspace.
 - Keep `README.md` up to date whenever code changes alter behavior, flags, workflows, or outputs.
-- For non-Unicode output, rely on `deps/printers.py`'s Unicode-to-ASCII map instead of adding ad-hoc fallbacks at call sites.
+- For non-Unicode output, rely on `src/deps/printers.py`'s Unicode-to-ASCII map instead of adding ad-hoc fallbacks at call sites.
 - Keep terminal output spacing block-based and explicit: for adjacent rendered UI blocks, maintain exactly one blank line separator (never zero, never two+). Avoid ad-hoc scattered `print()` newlines; prefer reusable helpers at block boundaries.
 - Keep count-based user-facing text grammatically correct (`1 row` vs `2 rows`, `1 scraper` vs `2 scrapers`, matching verbs like `differs` vs `differ`).
 - Agent SHOULD proactively and frequently create commits when appropriate (especially after coherent, validated progress).

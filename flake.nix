@@ -24,10 +24,10 @@
             shelpers."."."App" = {
               inherit shelp;
               run-app = {
-                description = "Run main.py";
+                description = "Run src/main.py";
                 make-app = true;
                 script = ''
-                  ${lib.getExe python3} ./main.py "$@"
+                  ${lib.getExe python3} ./src/main.py "$@"
                 '';
               };
               run-codex = {
@@ -66,7 +66,7 @@
           type = "app";
           program =
             let script = pkgs.writeShellScript "phone-price-scraper" ''
-                ${lib.getExe python3} ${./.}/main.py "$@"
+                ${lib.getExe python3} ${./.}/src/main.py "$@"
               '';
             in "${script}";
         };
