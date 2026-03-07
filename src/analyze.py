@@ -17,6 +17,7 @@ FLAG_SEARCH_STORAGES = cli_flags.require_flag("search_storages")
 FLAG_SEARCH_CONDITIONS = cli_flags.require_flag("search_conditions")
 FLAG_OUTPUT_CSV = cli_flags.require_flag("output_csv")
 FLAG_DATA_DIR = cli_flags.require_flag("data_dir")
+FLAG_HINTS = cli_flags.require_flag("hints")
 FLAG_UNICODE = cli_flags.require_flag("unicode")
 FLAG_COLORS = cli_flags.require_flag("colors")
 FLAG_PROFILE_PERFORMANCE = cli_flags.require_flag("profile_performance")
@@ -195,14 +196,21 @@ def run(
             flag_text=f"{FLAG_DATA_DIR.long}=PATH",
         )
         pretty_log.hint(
-            f"Unicode output: {'on' if deps.config.unicode else 'off'}",
-            verb="change with",
-            flag_text=f"{FLAG_UNICODE.long}=BOOL",
+            "Hints: on (this is a hint)",
+            verb="disable with",
+            flag_text=f"{FLAG_HINTS.long}=off",
         )
+        unicode_enabled = bool(deps.config.unicode)
         pretty_log.hint(
-            f"Color output: {'on' if deps.config.colors else 'off'}",
-            verb="change with",
-            flag_text=f"{FLAG_COLORS.long}=BOOL",
+            f"Unicode output: {'on' if unicode_enabled else 'off'}",
+            verb="disable with" if unicode_enabled else "enable with",
+            flag_text=f"{FLAG_UNICODE.long}={'off' if unicode_enabled else 'on'}",
+        )
+        colors_enabled = bool(deps.config.colors)
+        pretty_log.hint(
+            f"Color output: {'on' if colors_enabled else 'off'}",
+            verb="disable with" if colors_enabled else "enable with",
+            flag_text=f"{FLAG_COLORS.long}={'off' if colors_enabled else 'on'}",
         )
         pretty_log.section("Data Scrape")
         search_hints_shown = False
