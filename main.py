@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+import cli_flags
 import deps
 from core import Model, Storage, normalize_model_name
 
@@ -38,6 +39,20 @@ Use this when you want the current snapshot of scraped prices.
 CONDITION_FILTER_NOTE = (
     "Note: --search-conditions is limited to the known condition set: good,best."
 )
+
+FLAG_HELP = cli_flags.require_flag("help")
+FLAG_DATA_DIR = cli_flags.require_flag("data_dir")
+FLAG_SEARCH_SELLERS = cli_flags.require_flag("search_sellers")
+FLAG_SEARCH_MODELS = cli_flags.require_flag("search_models")
+FLAG_SEARCH_STORAGES = cli_flags.require_flag("search_storages")
+FLAG_SEARCH_CONDITIONS = cli_flags.require_flag("search_conditions")
+FLAG_OUTPUT_CSV = cli_flags.require_flag("output_csv")
+FLAG_UNICODE = cli_flags.require_flag("unicode")
+FLAG_COLORS = cli_flags.require_flag("colors")
+FLAG_PROFILE_PERFORMANCE = cli_flags.require_flag("profile_performance")
+FLAG_PROFILE_TRUNCATE_THRESHOLD = cli_flags.require_flag("profile_truncate_threshold")
+FLAG_PROFILE_TRUNCATE = cli_flags.require_flag("profile_truncate")
+FLAG_TABLE_DIRECTION = cli_flags.require_flag("table_direction")
 
 _ANSI_RESET = "\033[0m"
 _ANSI_BOLD = "\033[1m"
@@ -156,7 +171,7 @@ def _parse_bool(raw_value):
 class _UnicodeAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         if values is None:
-            setattr(namespace, self.dest, option_string != "-U")
+            setattr(namespace, self.dest, option_string != FLAG_UNICODE.short[1])
             return
         setattr(namespace, self.dest, _parse_bool(values))
 
@@ -164,7 +179,7 @@ class _UnicodeAction(argparse.Action):
 class _ColorsAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         if values is None:
-            setattr(namespace, self.dest, option_string != "-C")
+            setattr(namespace, self.dest, option_string != FLAG_COLORS.short[1])
             return
         setattr(namespace, self.dest, _parse_bool(values))
 
@@ -197,7 +212,7 @@ def _choose_data_dir(args):
         if not custom_path_used:
             return
         tip_prefix = _style(
-            "Tip: next time, pass this explicitly with -d ",
+            f"Tip: next time, pass this explicitly with {FLAG_DATA_DIR.short[0]} ",
             _ANSI_CYAN,
             enabled=args.colors,
         )
@@ -250,15 +265,15 @@ def build_parser():
     )
     help_group = parser.add_argument_group("help")
     help_group.add_argument(
-        "-h",
-        "--help",
+        FLAG_HELP.short[0],
+        FLAG_HELP.long,
         action="help",
         help="Show this help message and exit.",
     )
     general_group = parser.add_argument_group("general options")
     general_group.add_argument(
-        "-d",
-        "--data-dir",
+        FLAG_DATA_DIR.short[0],
+        FLAG_DATA_DIR.long,
         default="./data",
         metavar="PATH",
         action=_DataDirAction,
@@ -269,7 +284,7 @@ def build_parser():
     )
     search_group = parser.add_argument_group("search scope", CONDITION_FILTER_NOTE)
     search_group.add_argument(
-        "--search-sellers",
+        FLAG_SEARCH_SELLERS.long,
         default=None,
         metavar="LIST",
         help=(
@@ -278,7 +293,7 @@ def build_parser():
         ),
     )
     search_group.add_argument(
-        "--search-models",
+        FLAG_SEARCH_MODELS.long,
         default=None,
         metavar="LIST",
         help=(
@@ -287,7 +302,7 @@ def build_parser():
         ),
     )
     search_group.add_argument(
-        "--search-storages",
+        FLAG_SEARCH_STORAGES.long,
         default=None,
         metavar="LIST",
         help=(
@@ -296,7 +311,7 @@ def build_parser():
         ),
     )
     search_group.add_argument(
-        "--search-conditions",
+        FLAG_SEARCH_CONDITIONS.long,
         default=None,
         metavar="LIST",
         help=(
@@ -306,8 +321,8 @@ def build_parser():
     )
     output_group = parser.add_argument_group("file output")
     output_group.add_argument(
-        "-o",
-        "--output-csv",
+        FLAG_OUTPUT_CSV.short[0],
+        FLAG_OUTPUT_CSV.long,
         nargs="?",
         const="results.csv",
         default=None,
@@ -316,9 +331,9 @@ def build_parser():
     )
     display_group = parser.add_argument_group("terminal output")
     display_group.add_argument(
-        "-u",
-        "-U",
-        "--unicode",
+        FLAG_UNICODE.short[0],
+        FLAG_UNICODE.short[1],
+        FLAG_UNICODE.long,
         dest="unicode",
         nargs="?",
         action=_UnicodeAction,
@@ -330,9 +345,9 @@ def build_parser():
         ),
     )
     display_group.add_argument(
-        "-c",
-        "-C",
-        "--colors",
+        FLAG_COLORS.short[0],
+        FLAG_COLORS.short[1],
+        FLAG_COLORS.long,
         dest="colors",
         nargs="?",
         action=_ColorsAction,
@@ -345,20 +360,20 @@ def build_parser():
     )
     other_group = parser.add_argument_group("other options")
     other_group.add_argument(
-        "-p",
-        "--profile-performance",
+        FLAG_PROFILE_PERFORMANCE.short[0],
+        FLAG_PROFILE_PERFORMANCE.long,
         action="store_true",
         help="Show timing/profiling details at the end.",
     )
     other_group.add_argument(
-        "--profile-truncate-threshold",
+        FLAG_PROFILE_TRUNCATE_THRESHOLD.long,
         default=_parse_percentage_string("5%"),
         type=_parse_percentage_string,
         metavar="PCT",
         help="Truncate timing rows below this percent of total runtime (e.g. 5%%).",
     )
     other_group.add_argument(
-        "--profile-truncate",
+        FLAG_PROFILE_TRUNCATE.long,
         dest="profile_truncate",
         nargs="?",
         const=True,
@@ -368,7 +383,7 @@ def build_parser():
         help="Truncate timing table rows. Accepts true/false (default: true).",
     )
     display_group.add_argument(
-        "--table-direction",
+        FLAG_TABLE_DIRECTION.long,
         choices=("top-to-bottom", "bottom-to-top"),
         default="bottom-to-top",
         help=(
