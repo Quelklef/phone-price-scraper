@@ -1,7 +1,7 @@
 __pycache__/
 node_modules/
 .tmp*
-data.old
-data/http_get/cookies/
+data/
+data.*/
 results.csv
 .codex/

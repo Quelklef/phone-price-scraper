@@ -68,13 +68,6 @@
               ${lib.getExe python3} ${./.}/src/main.py "$@"
             ''}";
           };
-          sample = {
-            type = "app";
-            meta.description = ''Run with a sample pre-build data/ dir'';
-            program = "${pkgs.writeShellScript "phone-price-scraper-sample" ''
-              ${self.apps.${system}.default.program} -d ${./.}/data
-            ''}";
-          };
         };
 
         # Generated shelper script files (used by shelpers wrappers).
