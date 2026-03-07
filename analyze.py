@@ -305,11 +305,6 @@ def run(
         pretty_log.section("Pricing Table")
         print_results_table(results, table_direction=table_direction)
         pretty_log.known_price_summary(known_price_xref_count, len(results), known_price_xref_by_seller)
-        table_hint_shown = pretty_log.hint_block(
-            f"Table displayed in {table_direction} direction",
-            verb="change with",
-            flag_text=f"{FLAG_TABLE_DIRECTION.long}=top-to-bottom|bottom-to-top",
-        )
         if mismatch_count > 0:
             seller_text = _english_list(sorted(mismatch_sellers))
             deps.printer.print()
@@ -317,6 +312,11 @@ def run(
                 f"WARNING: {mismatch_count} prices differ from verified. The scrapers for "
                 f"{seller_text} may be producing bad results."
             )
+        table_hint_shown = pretty_log.hint_block(
+            f"Table displayed in {table_direction} direction",
+            verb="change with",
+            flag_text=f"{FLAG_TABLE_DIRECTION.long}=top-to-bottom|bottom-to-top",
+        )
         if output_csv_path:
             write_results_csv(results, output_csv_path)
             resolved_csv = Path(output_csv_path).resolve()
