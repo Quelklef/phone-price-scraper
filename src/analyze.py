@@ -245,8 +245,9 @@ def run(
         if search_hints_shown:
             pretty_log.spacer()
 
-        for (model, storage), condition, seller in product(
-            product(search_models, search_storages),
+        for model, storage, condition, seller in product(
+            search_models,
+            search_storages,
             active_conditions,
             active_sellers,
         ):
