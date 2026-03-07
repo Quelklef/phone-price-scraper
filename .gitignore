@@ -6,6 +6,6 @@ data.*/
 results.csv
 .codex/
 
-!data/
-!data/**
-data/http_get/cookies
+!data.sample/
+!data.sample/**
+data.sample/http_get/cookies
