@@ -23,6 +23,12 @@ _HINT_TEXT_STYLES = (DIM, ITALIC, WHITE)
 _HINT_FLAG_STYLES = (DIM, ITALIC, LIGHT_MAGENTA)
 
 
+def count_noun(count, singular, plural=None):
+    if count == 1:
+        return singular
+    return plural if plural is not None else f"{singular}s"
+
+
 def _emit(text):
     deps.printer.print(text)
 
@@ -184,8 +190,9 @@ def known_price_summary(xref_count, total_rows, by_seller):
     seller_text = ", ".join(f"{count} {seller}" for seller, count in by_seller.items())
     verified_tag = _paint("v", BOLD, GREEN)
     head = _paint("\nPrice is verified (", BOLD, MAGENTA)
+    entry_word = count_noun(xref_count, "entry", "entries")
     tail = _paint(
-        f") for {xref_count} entries (of {total_rows}, {pct:.1f}%). ({seller_text})",
+        f") for {xref_count} {entry_word} (of {total_rows}, {pct:.1f}%). ({seller_text})",
         BOLD,
         MAGENTA,
     )

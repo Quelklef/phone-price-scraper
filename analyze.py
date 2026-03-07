@@ -215,9 +215,13 @@ def run(
         )
         pretty_log.section("Data Scrape")
         search_hints_shown = False
+        seller_values = [seller.key for seller in active_sellers]
+        model_values = list(search_models or [])
+        storage_values = [f"{storage}gb" for storage in (search_storages or [])]
+        condition_values = list(search_conditions or ["good", "best"])
         search_hints_shown = (
             pretty_log.hint(
-            f"Searching sellers {_csv_text(seller.key for seller in active_sellers)}",
+            f"Searching {pretty_log.count_noun(len(seller_values), 'seller')} {_csv_text(seller_values)}",
             verb="change with",
             flag_text=f"{FLAG_SEARCH_SELLERS.long}=LIST",
             )
@@ -225,7 +229,7 @@ def run(
         )
         search_hints_shown = (
             pretty_log.hint(
-            f"Searching models {_csv_text(search_models or [])}",
+            f"Searching {pretty_log.count_noun(len(model_values), 'model')} {_csv_text(model_values)}",
             verb="change with",
             flag_text=f"{FLAG_SEARCH_MODELS.long}=LIST",
             )
@@ -233,7 +237,7 @@ def run(
         )
         search_hints_shown = (
             pretty_log.hint(
-            f"Searching storages {_csv_text(f'{storage}gb' for storage in search_storages or [])}",
+            f"Searching {pretty_log.count_noun(len(storage_values), 'storage')} {_csv_text(storage_values)}",
             verb="change with",
             flag_text=f"{FLAG_SEARCH_STORAGES.long}=LIST",
             )
@@ -241,7 +245,7 @@ def run(
         )
         search_hints_shown = (
             pretty_log.hint(
-            f"Searching conditions {_csv_text(search_conditions or ['good', 'best'])}",
+            f"Searching {pretty_log.count_noun(len(condition_values), 'condition')} {_csv_text(condition_values)}",
             verb="change with",
             flag_text=f"{FLAG_SEARCH_CONDITIONS.long}=LIST",
             )
@@ -307,9 +311,11 @@ def run(
         pretty_log.known_price_summary(known_price_xref_count, len(results), known_price_xref_by_seller)
         if mismatch_count > 0:
             seller_text = _english_list(sorted(mismatch_sellers))
-            deps.printer.print()
+            price_word = pretty_log.count_noun(mismatch_count, "price")
+            price_verb = "differs" if mismatch_count == 1 else "differ"
+            scraper_word = pretty_log.count_noun(len(mismatch_sellers), "scraper")
             pretty_log.warning_loud(
-                f"WARNING: {mismatch_count} prices differ from verified. The scrapers for "
+                f"WARNING: {mismatch_count} {price_word} {price_verb} from verified. The {scraper_word} for "
                 f"{seller_text} may be producing bad results."
             )
         table_hint_shown = pretty_log.hint_block(
@@ -320,9 +326,10 @@ def run(
         if output_csv_path:
             write_results_csv(results, output_csv_path)
             resolved_csv = Path(output_csv_path).resolve()
+            row_word = pretty_log.count_noun(len(results), "row")
             if table_hint_shown:
                 pretty_log.spacer()
-            deps.printer.print(f"CSV written to {resolved_csv} ({len(results)} rows)")
+            deps.printer.print(f"CSV written to {resolved_csv} ({len(results)} {row_word})")
         else:
             if table_hint_shown:
                 pretty_log.hint_block(
@@ -348,8 +355,9 @@ def run(
             deps.printer.print(line)
         if profile_truncate:
             pretty_log.spacer()
+            row_word = pretty_log.count_noun(summary["truncated_count"], "row")
             pretty_log.with_hint_suffix(
-                f"{summary['truncated_count']} profile rows removed",
+                f"{summary['truncated_count']} profile {row_word} removed",
                 verb="disable with",
                 flag_text=f"{FLAG_PROFILE_TRUNCATE.long}=false",
             )
