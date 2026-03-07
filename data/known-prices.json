@@ -14,6 +14,19 @@
   },
   {
     "seller": "amazon",
+    "model": "Google Pixel 6",
+    "storage": 128,
+    "condition": "best",
+    "urls_checked": [
+      "https://www.amazon.com/s?k=Google+Pixel+6+128GB+unlocked&page=1&rh=p_n_condition-type%3A6503240011",
+      "https://www.amazon.com/s?k=Google+Pixel+6+128GB+unlocked&page=2&rh=p_n_condition-type%3A6503240011",
+      "https://www.amazon.com/s?k=Google+Pixel+6+128GB+unlocked&page=3&rh=p_n_condition-type%3A6503240011"
+    ],
+    "computed_price": 9999.99,
+    "verified_at": null
+  },
+  {
+    "seller": "amazon",
     "model": "Google Pixel 6A",
     "storage": 128,
     "condition": "good",
