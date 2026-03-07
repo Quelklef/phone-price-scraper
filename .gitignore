@@ -5,3 +5,7 @@ data/
 data.*/
 results.csv
 .codex/
+
+!data/
+!data/**
+data/http_get/cookies
