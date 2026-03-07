@@ -25,7 +25,6 @@
               inherit shelp;
               run-app = {
                 description = "Run src/main.py";
-                make-app = true;
                 script = ''
                   ${lib.getExe python3} ./src/main.py "$@"
                 '';
@@ -62,13 +61,20 @@
           '';
         };
 
-        apps.default = {
-          type = "app";
-          program =
-            let script = pkgs.writeShellScript "phone-price-scraper" ''
-                ${lib.getExe python3} ${./.}/src/main.py "$@"
-              '';
-            in "${script}";
+        apps = {
+          default = {
+            type = "app";
+            program = "${pkgs.writeShellScript "phone-price-scraper" ''
+              ${lib.getExe python3} ${./.}/src/main.py "$@"
+            ''}";
+          };
+          sample = {
+            type = "app";
+            meta.description = ''Run with a sample pre-build data/ dir'';
+            program = "${pkgs.writeShellScript "phone-price-scraper-sample" ''
+              ${self.apps.${system}.default.program} -d ${./.}/data
+            ''}";
+          };
         };
 
         # Generated shelper script files (used by shelpers wrappers).
