@@ -17,12 +17,14 @@ FLAG_SEARCH_STORAGES = cli_flags.require_flag("search_storages")
 FLAG_SEARCH_CONDITIONS = cli_flags.require_flag("search_conditions")
 FLAG_OUTPUT_CSV = cli_flags.require_flag("output_csv")
 FLAG_DATA_DIR = cli_flags.require_flag("data_dir")
+FLAG_HINTS = cli_flags.require_flag("hints")
 FLAG_UNICODE = cli_flags.require_flag("unicode")
 FLAG_COLORS = cli_flags.require_flag("colors")
 FLAG_PROFILE_PERFORMANCE = cli_flags.require_flag("profile_performance")
 FLAG_PROFILE_TRUNCATE = cli_flags.require_flag("profile_truncate")
 FLAG_PROFILE_TRUNCATE_THRESHOLD = cli_flags.require_flag("profile_truncate_threshold")
 FLAG_TABLE_DIRECTION = cli_flags.require_flag("table_direction")
+DEFAULT_CONDITIONS = tuple(condition.value for condition in Condition)
 
 def _sort_results_by_price(results):
     # Keep "no listing" rows at the end while sorting numeric prices ascending.
@@ -117,6 +119,54 @@ def _csv_text(values):
     return ", ".join(str(value) for value in values)
 
 
+def _search_hint_specs(seller_values, model_values, storage_values, condition_values):
+    return (
+        (
+            len(seller_values),
+            "seller",
+            seller_values,
+            FLAG_SEARCH_SELLERS.long,
+        ),
+        (
+            len(model_values),
+            "model",
+            model_values,
+            FLAG_SEARCH_MODELS.long,
+        ),
+        (
+            len(storage_values),
+            "storage",
+            storage_values,
+            FLAG_SEARCH_STORAGES.long,
+        ),
+        (
+            len(condition_values),
+            "condition",
+            condition_values,
+            FLAG_SEARCH_CONDITIONS.long,
+        ),
+    )
+
+
+def _emit_search_hints(seller_values, model_values, storage_values, condition_values):
+    shown = False
+    for count, noun, values, flag in _search_hint_specs(
+        seller_values,
+        model_values,
+        storage_values,
+        condition_values,
+    ):
+        shown = (
+            pretty_log.hint(
+                f"Searching {pretty_log.count_noun(count, noun)} {_csv_text(values)}",
+                verb="change with",
+                flag_text=f"{flag}=LIST",
+            )
+            or shown
+        )
+    return shown
+
+
 def validate_known_price_row(seller, model, storage, condition, lowest_price, query_urls):
     key = (seller, model, storage, condition)
     expected = known_prices.get_known_price(key)
@@ -129,12 +179,12 @@ def validate_known_price_row(seller, model, storage, condition, lowest_price, qu
     urls_match = query_urls == expected_urls
     prices_match = _prices_match(expected_price, lowest_price)
     if not urls_match or not prices_match:
-        if not urls_match and not prices_match:
-            mismatch_kind = "URLs and price"
-        elif not urls_match:
-            mismatch_kind = "URLs"
-        else:
-            mismatch_kind = "price"
+        mismatch_parts = []
+        if not urls_match:
+            mismatch_parts.append("URLs")
+        if not prices_match:
+            mismatch_parts.append("price")
+        mismatch_kind = " and ".join(mismatch_parts)
 
         details = [
             "KNOWN-PRICE MISMATCH",
@@ -195,52 +245,32 @@ def run(
             flag_text=f"{FLAG_DATA_DIR.long}=PATH",
         )
         pretty_log.hint(
-            f"Unicode output: {'on' if deps.config.unicode else 'off'}",
-            verb="change with",
-            flag_text=f"{FLAG_UNICODE.long}=BOOL",
+            "Hints: on (this is a hint)",
+            verb="disable with",
+            flag_text=f"{FLAG_HINTS.long}=off",
         )
+        unicode_enabled = bool(deps.config.unicode)
         pretty_log.hint(
-            f"Color output: {'on' if deps.config.colors else 'off'}",
-            verb="change with",
-            flag_text=f"{FLAG_COLORS.long}=BOOL",
+            f"Unicode output: {'on' if unicode_enabled else 'off'}",
+            verb="disable with" if unicode_enabled else "enable with",
+            flag_text=f"{FLAG_UNICODE.long}={'off' if unicode_enabled else 'on'}",
+        )
+        colors_enabled = bool(deps.config.colors)
+        pretty_log.hint(
+            f"Color output: {'on' if colors_enabled else 'off'}",
+            verb="disable with" if colors_enabled else "enable with",
+            flag_text=f"{FLAG_COLORS.long}={'off' if colors_enabled else 'on'}",
         )
         pretty_log.section("Data Scrape")
-        search_hints_shown = False
         seller_values = [seller.key for seller in active_sellers]
         model_values = list(search_models or [])
         storage_values = [f"{storage}gb" for storage in (search_storages or [])]
-        condition_values = list(search_conditions or ["good", "best"])
-        search_hints_shown = (
-            pretty_log.hint(
-            f"Searching {pretty_log.count_noun(len(seller_values), 'seller')} {_csv_text(seller_values)}",
-            verb="change with",
-            flag_text=f"{FLAG_SEARCH_SELLERS.long}=LIST",
-            )
-            or search_hints_shown
-        )
-        search_hints_shown = (
-            pretty_log.hint(
-            f"Searching {pretty_log.count_noun(len(model_values), 'model')} {_csv_text(model_values)}",
-            verb="change with",
-            flag_text=f"{FLAG_SEARCH_MODELS.long}=LIST",
-            )
-            or search_hints_shown
-        )
-        search_hints_shown = (
-            pretty_log.hint(
-            f"Searching {pretty_log.count_noun(len(storage_values), 'storage')} {_csv_text(storage_values)}",
-            verb="change with",
-            flag_text=f"{FLAG_SEARCH_STORAGES.long}=LIST",
-            )
-            or search_hints_shown
-        )
-        search_hints_shown = (
-            pretty_log.hint(
-            f"Searching {pretty_log.count_noun(len(condition_values), 'condition')} {_csv_text(condition_values)}",
-            verb="change with",
-            flag_text=f"{FLAG_SEARCH_CONDITIONS.long}=LIST",
-            )
-            or search_hints_shown
+        condition_values = list(search_conditions or DEFAULT_CONDITIONS)
+        search_hints_shown = _emit_search_hints(
+            seller_values,
+            model_values,
+            storage_values,
+            condition_values,
         )
         if search_hints_shown:
             pretty_log.spacer()
@@ -350,7 +380,11 @@ def run(
                 verb="disable with",
                 flag_text=f"{FLAG_PROFILE_TRUNCATE.long}=false",
             )
-            threshold_pct = 0.0 if summary["top_total_s"] == 0 else (summary["threshold_s"] / summary["top_total_s"]) * 100.0
+            threshold_pct = (
+                0.0
+                if summary["top_total_s"] == 0
+                else (summary["threshold_s"] / summary["top_total_s"]) * 100.0
+            )
             pretty_log.with_detail_hint(
                 f"Removal threshold {summary['threshold_s']:.3f}s",
                 detail=f"{threshold_pct:.1f}% of total runtime",

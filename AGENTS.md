@@ -7,6 +7,7 @@
 - Keep terminal output spacing block-based and explicit: for adjacent rendered UI blocks, maintain exactly one blank line separator (never zero, never two+). Avoid ad-hoc scattered `print()` newlines; prefer reusable helpers at block boundaries.
 - Keep count-based user-facing text grammatically correct (`1 row` vs `2 rows`, `1 scraper` vs `2 scrapers`, matching verbs like `differs` vs `differ`).
 - Stay aware of files with existing uncommitted edits in the worktree, and do not accidentally include unrelated changes when staging or committing task-specific work.
+- When reporting completed commits to the user, include the commit hash and the commit message summary (short text only, not full patch/log output).
 - Agent SHOULD proactively and frequently create commits when appropriate (especially after coherent, validated progress).
 - If a change is a minor tweak to the immediately previous change, amend the previous commit instead of creating a new commit.
 - When amending, update the commit message if needed so it accurately reflects the revised scope.

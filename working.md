@@ -1,31 +1,4 @@
 
-- Readme changes:
-
-  - Remove "Example known-good query"
-  - Update CLI flags
-  - Update sec 1 to make clear that the listed models and storages are just the default ranges, and that other ranges can be selected in the CLI
-  - Recommend over-HTTP `nix run` first, and then local `nix run`, and then devshell for development only. Show flags with the over-HTTP `nix run` call example.
-  - Add sample output by running `run-app -o` and turning the output CSV into an abbreviated markdown table. Include these rows: model, storage, condition, seller, minimum price (link to listing)
-  - Add a new "Gotchas" section and note that multi-variant listings (eg, "Pixel 7 / 7 Pro 128GB") are excluded for the sake of simplicity.
-
-  Add a note in AGENTS.md to keep the README up-to-date when code changes are amde.
-
-- For the post-table price mismatch warning,
-  - Show immediately after the "Price is verified ..." logline.
-  - Show "scraper" instead of "scrapers" if it's just one
-
-- Add tests to timing.py.
-
-  This will require adding a new 'perf_time' dep with two implementations. The first is the real one with a 'get_time()' function that delegates to 'time.perf_counter()'. The second is a mock version with 'set_time()' and 'get_time().
-
-  Then, add the following tests, using the mock perf time dep:
-
-  1. For no data, _STATS has correct totals
-  2. For a single recorded stage, _STATS has correct totals
-  3. For multiple stages, some repeated, some overlapping/nested with others, _STATS has correct toals
-  4. render_summary() returns something other than whitespace for no data
-  5. render_summary() contains all the totals from _STATS (property test)
-  6. _prune_redundant_rows() removes exactly those rows with duplicate paths (propery test)
 
 - Repeatedly do the following until there is no more to do:
 
@@ -35,4 +8,50 @@
   - Find something that deserves a comment, and give it one
   - Find something that can be optimized without architectural changes, and do it
 
-  Then, verify we still have no mismatches and commit.
+
+
+
+### Notes on equality/hashing
+
+Option A (current)
+
+Two notions of equality: `==` (structural) and `is` (identity).
+
+Hashable types are required to keep `hash()` coherent with `==` by ensuring that if `a == b` then `hash(a) == hash(b)`.
+
+Consequence: mutable datatypes cannot be hashable:
+  (a) If you hash by contents, then a value's hash could change over time, which breaks `dict`/`set` internals
+  (b) If you hash by identity, then the hash law can be violated
+
+~~~
+Option B (alternative)
+
+Add a new operator `~~` which checks Leibniz-style equality. Operationally, `~~` is implemented by acting like `==` on immutable types and `is` on mutable types. Conceptually, two values are `~~` if they are indistinguishable by normal value algebra operations (ie, not stuff like `id()`).
+
+Make this the standard go-to equality check, with `==` and `is` reserved for when you specifically want to project down to structural/identity comparison.
+
+The point of this is larger than adding a new operator; it's to shift the conceptualization of mutable values. One should think of a mutable value as a reference to data, and an immutable value as data proper. The data of a mutable value is the reference itself (eg, numeric memory location), rather than the data referenced. In this model, `~~` is simply the canonical correct equality operator,
+
+Change the hash law to use `~~`: if `a ~~ b` then `hash(a) ~~ hash(b)`
+
+Consequence: mutable datatypes become hashable (identity semantics)
+
+~~~
+Comparison table
+
+Mutable values as container keys:
+- Option A: disallowed unless converted to an immutable value first, which gives structural key semantics.
+- Option B: allowed directly with identity semantics, or convertible to immutable first for structural key semantics.
+
+Hashability of mutable values:
+- Option A: mutable values cannot be hashed
+- Option B: mutable values can be hashed (identity/reference semantics)
+
+Hash coherence:
+- Option A: hash coherence with `==` (structural equality)
+- Option B: hash coherence with `~~` (Leibniz equality)
+
+Conceptual surface area:
+- Option A: two equality operators (`==`, `is`).
+- Option B: three equality operators (`~~`, `==`, `is`)
+

@@ -70,6 +70,7 @@ def _parse_csv(raw_value, field_name):
 
 def _parse_choice_csv(raw_value, *, field_name, allowed_values):
     selected = []
+    seen = set()
     invalid = []
     allowed = tuple(allowed_values)
     allowed_set = set(allowed)
@@ -78,8 +79,9 @@ def _parse_choice_csv(raw_value, *, field_name, allowed_values):
         if token not in allowed_set:
             invalid.append(item)
             continue
-        if token not in selected:
+        if token not in seen:
             selected.append(token)
+            seen.add(token)
     if invalid:
         allowed_text = ",".join(allowed)
         raise argparse.ArgumentTypeError(
@@ -90,15 +92,18 @@ def _parse_choice_csv(raw_value, *, field_name, allowed_values):
 
 def _parse_models_csv(raw_value):
     selected: list[Model] = []
+    seen: set[Model] = set()
     for model in _parse_csv(raw_value, "model"):
         normalized = normalize_model_name(model)
-        if normalized not in selected:
+        if normalized not in seen:
             selected.append(normalized)
+            seen.add(normalized)
     return selected
 
 
 def _parse_storages_csv(raw_value):
     selected: list[Storage] = []
+    seen: set[Storage] = set()
     invalid = []
     for item in _parse_csv(raw_value, "storage"):
         token = item.strip().lower()
@@ -108,8 +113,9 @@ def _parse_storages_csv(raw_value):
             invalid.append(item)
             continue
         storage_gb = int(token)
-        if storage_gb not in selected:
+        if storage_gb not in seen:
             selected.append(storage_gb)
+            seen.add(storage_gb)
     if invalid:
         raise argparse.ArgumentTypeError(
             f"Unknown storage values: {', '.join(invalid)}. Example: 128gb,256gb"
@@ -166,20 +172,22 @@ def _parse_bool(raw_value):
     )
 
 
-class _UnicodeAction(argparse.Action):
+class _ToggleAction(argparse.Action):
+    disable_short_flag = ""
+
     def __call__(self, parser, namespace, values, option_string=None):
         if values is None:
-            setattr(namespace, self.dest, option_string != FLAG_UNICODE.short[1])
+            setattr(namespace, self.dest, option_string != self.disable_short_flag)
             return
         setattr(namespace, self.dest, _parse_bool(values))
 
 
-class _ColorsAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if values is None:
-            setattr(namespace, self.dest, option_string != FLAG_COLORS.short[1])
-            return
-        setattr(namespace, self.dest, _parse_bool(values))
+class _UnicodeAction(_ToggleAction):
+    disable_short_flag = FLAG_UNICODE.short[1]
+
+
+class _ColorsAction(_ToggleAction):
+    disable_short_flag = FLAG_COLORS.short[1]
 
 
 class _DataDirAction(argparse.Action):

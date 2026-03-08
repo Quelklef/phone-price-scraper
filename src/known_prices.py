@@ -10,6 +10,8 @@ from core import Condition, Model, Storage, normalize_model_name
 KnownPriceKey = tuple[str, Model, Storage, Condition]
 KnownPriceValue = tuple[frozenset[str], float | None]
 KNOWN_PRICES_PATH = Path(deps.config.known_prices_data_path)
+_KNOWN_PRICE_CACHE: dict[KnownPriceKey, KnownPriceValue] | None = None
+_KNOWN_PRICE_CACHE_SIG: tuple[int, int] | None = None
 
 
 def _normalize_model(raw_model):
@@ -39,8 +41,9 @@ def _normalize_condition(raw_condition):
     if isinstance(raw_condition, str):
         if raw_condition in Condition.__members__:
             return Condition[raw_condition]
+        lowered = raw_condition.lower()
         for condition in Condition:
-            if raw_condition.lower() == condition.value:
+            if lowered == condition.value:
                 return condition
     raise ValueError(f"Invalid condition in known-prices.json: {raw_condition!r}")
 
@@ -109,9 +112,28 @@ def _load_known_prices(path):
             return prices
 
 
+def _path_signature(path):
+    if not path.exists():
+        return None
+    stat = path.stat()
+    return (stat.st_mtime_ns, stat.st_size)
+
+
+def _load_known_prices_cached(path):
+    global _KNOWN_PRICE_CACHE
+    global _KNOWN_PRICE_CACHE_SIG
+    signature = _path_signature(path)
+    if _KNOWN_PRICE_CACHE is not None and signature == _KNOWN_PRICE_CACHE_SIG:
+        return _KNOWN_PRICE_CACHE
+    prices = _load_known_prices(path)
+    _KNOWN_PRICE_CACHE = prices
+    _KNOWN_PRICE_CACHE_SIG = signature
+    return prices
+
+
 def get_known_price(key):
     with deps.timing.time_stage("known_prices", "lookup"):
-        return _load_known_prices(KNOWN_PRICES_PATH).get(key)
+        return _load_known_prices_cached(KNOWN_PRICES_PATH).get(key)
 
 
 def load_known_price_rows():
@@ -125,6 +147,11 @@ def load_known_price_rows():
 
 
 def save_known_price_rows(rows):
+    global _KNOWN_PRICE_CACHE
+    global _KNOWN_PRICE_CACHE_SIG
     with deps.timing.time_stage("known_prices", "save_rows"):
         KNOWN_PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
         KNOWN_PRICES_PATH.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    # Keep in-memory view in sync for later lookups in the same process.
+    _KNOWN_PRICE_CACHE = None
+    _KNOWN_PRICE_CACHE_SIG = None
