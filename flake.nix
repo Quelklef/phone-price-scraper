@@ -116,7 +116,7 @@
             type = "app";
             meta.description = ''Run with a sample pre-build data/ dir'';
             program = "${pkgs.writeShellScript "phone-price-scraper-sample" ''
-              ${self.apps.${system}.default.program} -d ${./.}/data.sample
+              ${self.apps.${system}.default.program} -d ${./.}/data.sample "$@"
             ''}";
           };
         };
